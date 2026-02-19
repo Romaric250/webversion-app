@@ -1,0 +1,26 @@
+import type { Metadata } from 'next'
+import { Plus_Jakarta_Sans } from 'next/font/google'
+import './globals.css'
+import { AuthProvider } from '@/contexts/AuthContext'
+
+const font = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+})
+
+export const metadata: Metadata = {
+  title: 'SignNova — Sign Language Translation',
+  description: 'Real-time sign language translation for inclusive communication. Powered by Sign Bridge.',
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="en" className={font.variable}>
+      <body className="font-sans antialiased min-h-screen bg-background">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
+    </html>
+  )
+}

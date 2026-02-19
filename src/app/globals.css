@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-white antialiased;
+  }
+}
+
+@layer components {
+  .page-container {
+    @apply w-full max-w-app-content mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  .page-header {
+    @apply mb-8;
+  }
+  .page-title {
+    @apply text-2xl sm:text-3xl font-bold text-white tracking-tight;
+  }
+  .page-subtitle {
+    @apply text-white/60 mt-1 text-sm sm:text-base;
+  }
+  .card {
+    @apply rounded-xl bg-background-secondary border border-background-tertiary;
+  }
+  .card-hover {
+    @apply transition-colors hover:border-primary/30 hover:bg-background-tertiary/50;
+  }
+}
