@@ -17,6 +17,12 @@ interface Group {
   members: { user: { id: string; name: string } }[]
 }
 
+interface InviteGroup {
+  id: string
+  name: string
+  inviteCode: string
+}
+
 function GroupsPageContent() {
   const searchParams = useSearchParams()
   const [groups, setGroups] = useState<Group[]>([])
@@ -29,14 +35,54 @@ function GroupsPageContent() {
   const [createName, setCreateName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [copied, setCopied] = useState<'link' | 'code' | null>(null)
+  const [inviteModalOpen, setInviteModalOpen] = useState(false)
+  const [inviteGroup, setInviteGroup] = useState<InviteGroup | null>(null)
+  const [joiningInvite, setJoiningInvite] = useState(false)
 
   useEffect(() => {
     const join = searchParams.get('join')
     if (join) {
-      setInviteCode(join.toUpperCase())
-      setJoinOpen(true)
+      const code = join.trim().toUpperCase()
+      setInviteCode(code)
+      fetch(`${API_BASE_URL}/groups/by-invite/${code}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.data) {
+            setInviteGroup(data.data)
+          } else {
+            setJoinOpen(true)
+          }
+        })
+        .catch(() => setJoinOpen(true))
     }
   }, [searchParams])
+
+  const handleJoinFromInvite = async () => {
+    if (!inviteGroup) return
+    setJoiningInvite(true)
+    try {
+      const { data } = await apiClient.post<{ success: boolean; data: Group }>(
+        `${API_BASE_URL}/groups/join`,
+        { inviteCode: inviteGroup.inviteCode }
+      )
+      if (data.success) {
+        setGroups((prev) => (prev.some((g) => g.id === data.data.id) ? prev : [data.data, ...prev]))
+        setInviteModalOpen(false)
+        setInviteGroup(null)
+        setInviteCode('')
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to join group')
+    } finally {
+      setJoiningInvite(false)
+    }
+  }
+
+  const closeInviteModal = () => {
+    setInviteModalOpen(false)
+    setInviteGroup(null)
+    if (inviteCode) setJoinOpen(true)
+  }
 
   const fetchGroups = async () => {
     try {
@@ -53,6 +99,18 @@ function GroupsPageContent() {
   useEffect(() => {
     fetchGroups()
   }, [])
+
+  useEffect(() => {
+    if (inviteGroup && !loading) {
+      const alreadyMember = groups.some((g) => g.id === inviteGroup.id)
+      if (alreadyMember) {
+        setInviteModalOpen(false)
+        setInviteGroup(null)
+      } else {
+        setInviteModalOpen(true)
+      }
+    }
+  }, [inviteGroup, groups, loading])
 
   const createGroup = async () => {
     if (!createName.trim()) return
@@ -106,12 +164,20 @@ function GroupsPageContent() {
   return (
     <>
       <PageHeader title="Transcription Groups" subtitle="Share and collaborate in real-time" actions={
-        <div className="flex gap-2">
-          <button onClick={() => setJoinOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-background-secondary border border-background-tertiary text-white hover:bg-background-tertiary">
-            <LogIn className="h-5 w-5" /> Join
+        <div className="flex gap-3">
+          <button
+            onClick={() => setJoinOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-background-secondary border border-background-tertiary text-white font-medium hover:bg-background-tertiary hover:border-background-elevated transition-colors"
+          >
+            <LogIn className="h-5 w-5" />
+            Join group
           </button>
-          <button onClick={() => setCreateOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-background font-semibold hover:bg-primary-dark">
-            <Plus className="h-5 w-5" /> Create
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-background font-semibold hover:bg-primary-dark shadow-lg shadow-primary/20 transition-colors"
+          >
+            <Plus className="h-5 w-5" />
+            Create group
           </button>
         </div>
       } />
@@ -122,20 +188,52 @@ function GroupsPageContent() {
         </div>
       )}
 
+      <Modal isOpen={inviteModalOpen} onClose={closeInviteModal} title="Join group">
+        {inviteGroup && (
+          <div className="space-y-4">
+            <p className="text-white/70">
+              You&apos;ve been invited to join <strong className="text-white">{inviteGroup.name}</strong>. Would you like to join?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleJoinFromInvite}
+                disabled={joiningInvite}
+                className="flex-1 px-4 py-3 rounded-xl bg-primary text-background font-semibold hover:bg-primary-dark disabled:opacity-50 transition-colors"
+              >
+                {joiningInvite ? 'Joining...' : 'Yes, join'}
+              </button>
+              <button
+                onClick={closeInviteModal}
+                className="px-4 py-3 rounded-xl bg-background-tertiary text-white/80 font-medium hover:bg-background-elevated transition-colors"
+              >
+                No thanks
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       <Modal isOpen={createOpen} onClose={() => setCreateOpen(false)} title="Create group">
         <div className="space-y-4">
           <input
             value={createName}
             onChange={(e) => setCreateName(e.target.value)}
             placeholder="Group name"
-            className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50"
+            className="w-full px-4 py-3 rounded-xl bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50"
             autoFocus
           />
-          <div className="flex gap-2">
-            <button onClick={createGroup} disabled={!createName.trim()} className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-background font-medium disabled:opacity-50">
-              Create
+          <div className="flex gap-3">
+            <button
+              onClick={createGroup}
+              disabled={!createName.trim()}
+              className="flex-1 px-4 py-3 rounded-xl bg-primary text-background font-semibold hover:bg-primary-dark disabled:opacity-50 transition-colors"
+            >
+              Create group
             </button>
-            <button onClick={() => setCreateOpen(false)} className="px-4 py-2.5 rounded-lg bg-background-tertiary text-white/80">
+            <button
+              onClick={() => setCreateOpen(false)}
+              className="px-4 py-3 rounded-xl bg-background-tertiary text-white/80 font-medium hover:bg-background-elevated transition-colors"
+            >
               Cancel
             </button>
           </div>
@@ -149,14 +247,21 @@ function GroupsPageContent() {
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
             placeholder="e.g. A1B2C3D4"
-            className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50 uppercase font-mono text-lg tracking-wider"
+            className="w-full px-4 py-3 rounded-xl bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50 uppercase font-mono text-lg tracking-wider"
             autoFocus
           />
-          <div className="flex gap-2">
-            <button onClick={joinGroup} disabled={!inviteCode.trim()} className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-background font-medium disabled:opacity-50">
-              Join
+          <div className="flex gap-3">
+            <button
+              onClick={joinGroup}
+              disabled={!inviteCode.trim()}
+              className="flex-1 px-4 py-3 rounded-xl bg-primary text-background font-semibold hover:bg-primary-dark disabled:opacity-50 transition-colors"
+            >
+              Join group
             </button>
-            <button onClick={() => setJoinOpen(false)} className="px-4 py-2.5 rounded-lg bg-background-tertiary text-white/80">
+            <button
+              onClick={() => setJoinOpen(false)}
+              className="px-4 py-3 rounded-xl bg-background-tertiary text-white/80 font-medium hover:bg-background-elevated transition-colors"
+            >
               Cancel
             </button>
           </div>
@@ -215,8 +320,8 @@ function GroupsPageContent() {
           <p className="text-white/80 font-medium mb-1">No groups yet</p>
           <p className="text-white/50 text-sm mb-6">Create or join a group to collaborate</p>
           <div className="flex gap-4 justify-center">
-            <button onClick={() => setCreateOpen(true)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-background font-semibold"><Plus className="h-4 w-4" /> Create group</button>
-            <button onClick={() => setJoinOpen(true)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-background-secondary border border-background-tertiary text-white"><LogIn className="h-4 w-4" /> Join group</button>
+            <button onClick={() => setCreateOpen(true)} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-background font-semibold hover:bg-primary-dark"><Plus className="h-4 w-4" /> Create group</button>
+            <button onClick={() => setJoinOpen(true)} className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-background-secondary border border-background-tertiary text-white font-medium hover:bg-background-tertiary"><LogIn className="h-4 w-4" /> Join group</button>
           </div>
         </div>
       ) : (

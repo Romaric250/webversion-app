@@ -1,16 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { authApi } from '@/services/api/auth.api'
 import { cn } from '@/lib/utils'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login, isAuthenticated, isLoading, setIsLoading } = useAuthStore()
+  const redirectTo = searchParams.get('redirect') || '/app'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -35,7 +37,7 @@ export default function LoginPage() {
     try {
       const res = await authApi.login({ email, password })
       login(res.user, res.token)
-      router.replace('/app')
+      router.replace(redirectTo)
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Login failed')
     } finally {
@@ -44,7 +46,7 @@ export default function LoginPage() {
   }
 
   if (isAuthenticated) {
-    router.replace('/app')
+    router.replace(redirectTo)
     return null
   }
 
@@ -146,5 +148,17 @@ export default function LoginPage() {
         </Link>
       </p>
     </>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center py-12">
+        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }

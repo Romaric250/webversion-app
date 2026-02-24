@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, Mic, Square, Loader2, MoreVertical, Trash2, LogOut, Share2, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Send, Mic, Square, Loader2, MoreVertical, Trash2, LogOut, Share2, Copy, Check, Edit2, Pause, X } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { API_BASE_URL } from '@/config/api'
 import { getAuthToken } from '@/lib/storage'
@@ -51,9 +51,13 @@ export default function GroupChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editName, setEditName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [copied, setCopied] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [recordingPaused, setRecordingPaused] = useState(false)
+  const recordingCancelledRef = useRef(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -114,6 +118,7 @@ export default function GroupChatPage() {
     if (!socket) return
     socket.emit('group:join', id)
     socket.on('group:message', (msg: Message) => {
+      if (msg.user?.id === user?.id) return
       setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]))
     })
     return () => {
@@ -153,6 +158,12 @@ export default function GroupChatPage() {
           timerRef.current = null
         }
         setRecordingTime(0)
+        setRecordingPaused(false)
+        if (recordingCancelledRef.current) {
+          recordingCancelledRef.current = false
+          setRecording(false)
+          return
+        }
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
         if (blob.size < 1000) {
           setRecording(false)
@@ -163,17 +174,20 @@ export default function GroupChatPage() {
           const formData = new FormData()
           formData.append('audio', blob, 'recording.webm')
           const token = getAuthToken()
-          const res = await fetch(`${API_BASE_URL}/groups/${id}/messages/voice`, {
+          const res = await fetch(`${API_BASE_URL}/translate/transcribe`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
             body: formData,
           })
           if (res.ok) {
             const data = await res.json()
-            if (data.success) setMessages((prev) => [...prev, data.data])
+            if (data.success) {
+              const transcript = data.data?.text || data.data?.rawText || ''
+              setInput((prev) => (prev ? `${prev}\n\n${transcript}` : transcript))
+            }
           }
         } catch {
-          setError('Failed to send voice message')
+          setError('Failed to transcribe')
         } finally {
           setTranscribing(false)
           setRecording(false)
@@ -188,6 +202,37 @@ export default function GroupChatPage() {
 
   const stopRecording = () => {
     mediaRecorderRef.current?.state !== 'inactive' && mediaRecorderRef.current?.stop()
+  }
+
+  const cancelRecording = () => {
+    recordingCancelledRef.current = true
+    if (mediaRecorderRef.current?.state !== 'inactive') {
+      mediaRecorderRef.current?.stop()
+      chunksRef.current = []
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    setRecordingTime(0)
+    setRecording(false)
+    setRecordingPaused(false)
+  }
+
+  const togglePauseRecording = () => {
+    const rec = mediaRecorderRef.current
+    if (!rec) return
+    if (recordingPaused) {
+      rec.resume()
+      timerRef.current = setInterval(() => setRecordingTime((t) => t + 1), 1000)
+    } else {
+      rec.pause()
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
+    setRecordingPaused(!recordingPaused)
   }
 
   const handleDeleteGroup = async () => {
@@ -221,6 +266,32 @@ export default function GroupChatPage() {
     } catch {
       setError('Failed to copy')
     }
+  }
+
+  const handleUpdateGroupName = async () => {
+    if (!editName.trim() || editName === groupName) {
+      setEditOpen(false)
+      return
+    }
+    try {
+      const { data } = await apiClient.patch<{ success: boolean; data: { name: string } }>(
+        `${API_BASE_URL}/groups/${id}`,
+        { name: editName.trim() }
+      )
+      if (data.success) {
+        setGroupName(data.data.name)
+        setEditOpen(false)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update')
+    }
+    setMenuOpen(false)
+  }
+
+  const openEdit = () => {
+    setEditName(groupName)
+    setEditOpen(true)
+    setMenuOpen(false)
   }
 
   const handleLeaveGroup = async () => {
@@ -269,6 +340,15 @@ export default function GroupChatPage() {
                   <Share2 className="h-4 w-4" />
                   Share group
                 </button>
+                {isAdmin && (
+                  <button
+                    onClick={openEdit}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-white/80 hover:bg-background-tertiary text-left text-sm"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    Edit name
+                  </button>
+                )}
                 <button
                   onClick={handleLeaveGroup}
                   className="w-full flex items-center gap-2 px-4 py-2 text-white/80 hover:bg-background-tertiary text-left text-sm"
@@ -296,6 +376,26 @@ export default function GroupChatPage() {
           <Toast message={error} type="error" onDismiss={() => setError(null)} />
         </div>
       )}
+
+      <Modal isOpen={editOpen} onClose={() => setEditOpen(false)} title="Edit group name">
+        <div className="space-y-4">
+          <input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            placeholder="Group name"
+            className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button onClick={handleUpdateGroupName} disabled={!editName.trim() || editName === groupName} className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-background font-medium disabled:opacity-50">
+              Save
+            </button>
+            <button onClick={() => setEditOpen(false)} className="px-4 py-2.5 rounded-lg bg-background-tertiary text-white/80">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal isOpen={shareOpen} onClose={() => setShareOpen(false)} title="Share group">
         <div className="space-y-4">
@@ -375,6 +475,7 @@ export default function GroupChatPage() {
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               Recording {formatDuration(recordingTime)}
+              {recordingPaused && " (paused)"}
             </span>
           )}
           {transcribing && (
@@ -413,12 +514,29 @@ export default function GroupChatPage() {
             </button>
           </>
         ) : recording ? (
-          <button
-            onClick={stopRecording}
-            className="p-3 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-          >
-            <Square className="h-5 w-5" fill="currentColor" />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={togglePauseRecording}
+              className="p-3 rounded-xl bg-background-secondary border border-background-tertiary text-white hover:bg-background-tertiary transition-colors"
+              title={recordingPaused ? "Resume" : "Pause"}
+            >
+              <Pause className="h-5 w-5" />
+            </button>
+            <button
+              onClick={stopRecording}
+              className="p-3 rounded-xl bg-primary text-background hover:bg-primary-dark transition-colors"
+              title="Finish and transcribe"
+            >
+              <Square className="h-5 w-5" fill="currentColor" />
+            </button>
+            <button
+              onClick={cancelRecording}
+              className="p-3 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+              title="Cancel"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         ) : (
           <span className="flex items-center gap-2 px-4 py-3 text-white/60">
             <Loader2 className="h-5 w-5 animate-spin" />
