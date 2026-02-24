@@ -438,29 +438,31 @@ export default function GroupChatPage() {
               key={m.id}
               className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}
             >
-              <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 text-primary text-sm font-bold">
+              <div className="w-9 h-9 rounded-full bg-background-tertiary flex items-center justify-center flex-shrink-0 text-white/80 text-sm font-semibold">
                 {m.user.name?.charAt(0) || '?'}
               </div>
-              <div className={`flex-1 min-w-0 max-w-[85%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
+              <div className={`flex-1 min-w-0 max-w-[85%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+                <p className={`text-xs font-medium text-white/50 px-1 ${isOwn ? 'text-right' : 'text-left'}`}>
+                  {m.user.name}
+                </p>
                 <div
-                  className={`rounded-2xl px-4 py-2.5 ${
+                  className={`rounded-2xl px-4 py-3 ${
                     isOwn
-                      ? 'bg-primary text-background rounded-br-md'
-                      : 'bg-background-secondary border border-background-tertiary rounded-bl-md'
+                      ? 'bg-indigo-600/90 text-white rounded-br-md'
+                      : 'bg-background-secondary border border-background-tertiary text-white/90 rounded-bl-md'
                   }`}
                 >
-                  <p className="text-sm font-medium opacity-90">{m.user.name}</p>
-                  <p className="mt-1 text-[15px] leading-relaxed whitespace-pre-wrap break-words">
+                  <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
                     {m.content}
                   </p>
                   {m.type === 'voice' && m.rawContent && m.rawContent !== m.content && (
                     <details className="mt-2">
-                      <summary className="text-xs opacity-75 cursor-pointer">View raw</summary>
-                      <p className="mt-1 text-xs opacity-75">{m.rawContent}</p>
+                      <summary className="text-xs text-white/70 cursor-pointer">View raw</summary>
+                      <p className="mt-1 text-xs text-white/60">{m.rawContent}</p>
                     </details>
                   )}
                 </div>
-                <p className="text-white/40 text-xs mt-1 px-1">{formatTime(m.createdAt)}</p>
+                <p className={`text-white/40 text-xs px-1 ${isOwn ? 'text-right' : 'text-left'}`}>{formatTime(m.createdAt)}</p>
               </div>
             </div>
           )
