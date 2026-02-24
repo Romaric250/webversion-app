@@ -3,16 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X, Home, BookOpen, Search, User, LogOut } from 'lucide-react'
+import { Menu, X, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { navItems, isActive } from '@/lib/nav'
 import { cn } from '@/lib/utils'
-
-const navItems = [
-  { href: '/app', label: 'Dashboard', icon: Home },
-  { href: '/app/learning', label: 'Learning', icon: BookOpen },
-  { href: '/app/dictionary', label: 'Dictionary', icon: Search },
-  { href: '/app/profile', label: 'Profile', icon: User },
-]
 
 export function AppHeader() {
   const pathname = usePathname()
@@ -44,11 +38,17 @@ export function AppHeader() {
       </button>
 
       {mobileMenuOpen && (
-        <div className="absolute top-full left-0 right-0 bg-background-secondary border-b border-background-tertiary shadow-lg">
-          <nav className="p-4 space-y-1">
+        <>
+          <div
+            className="fixed inset-0 top-14 bg-black/40 z-30"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden
+          />
+          <div className="absolute top-full left-0 right-0 bg-background-secondary border-b border-background-tertiary shadow-xl z-50 max-h-[calc(100vh-3.5rem)] overflow-y-auto">
+            <nav className="p-4 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon
-              const isActive = pathname === item.href
+              const active = isActive(pathname, item.href)
               return (
                 <Link
                   key={item.href}
@@ -56,7 +56,7 @@ export function AppHeader() {
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium',
-                    isActive ? 'bg-primary/15 text-primary' : 'text-white/80 hover:bg-background-tertiary'
+                    active ? 'bg-primary/15 text-primary' : 'text-white/80 hover:bg-background-tertiary'
                   )}
                 >
                   <Icon className="h-5 w-5" />
@@ -64,6 +64,7 @@ export function AppHeader() {
                 </Link>
               )
             })}
+            <div className="my-2 border-t border-background-tertiary" />
             <button
               onClick={handleLogout}
               className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-white/80 hover:bg-red-500/10 hover:text-red-400"
@@ -72,7 +73,8 @@ export function AppHeader() {
               Sign out
             </button>
           </nav>
-        </div>
+          </div>
+        </>
       )}
     </header>
   )

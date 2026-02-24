@@ -25,7 +25,10 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       removeAuthToken()
     }
-    const message = error.response?.data?.error || error.response?.data?.message || error.message
-    return Promise.reject(new Error(message || 'An error occurred'))
+    const msg = error.response?.data?.error || error.response?.data?.message || error.message
+    const friendly = typeof msg === 'string' && msg.toLowerCase().includes('not found')
+      ? 'The requested resource could not be found.'
+      : msg
+    return Promise.reject(new Error(friendly || 'Something went wrong. Please try again.'))
   }
 )

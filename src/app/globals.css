@@ -30,4 +30,7 @@
   .card-hover {
     @apply transition-colors hover:border-primary/30 hover:bg-background-tertiary/50;
   }
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
 }

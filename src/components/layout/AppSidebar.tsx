@@ -2,16 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, BookOpen, Search, User, LogOut, Hand } from 'lucide-react'
+import { LogOut, Hand, Shield } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { navItems, isActive } from '@/lib/nav'
 import { cn } from '@/lib/utils'
-
-const navItems = [
-  { href: '/app', label: 'Dashboard', icon: Home },
-  { href: '/app/learning', label: 'Learning', icon: BookOpen },
-  { href: '/app/dictionary', label: 'Dictionary', icon: Search },
-  { href: '/app/profile', label: 'Profile', icon: User },
-]
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -37,14 +31,14 @@ export function AppSidebar() {
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href
+          const active = isActive(pathname, item.href)
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
                 'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                isActive
+                active
                   ? 'bg-primary/15 text-primary border border-primary/20'
                   : 'text-white/80 hover:bg-background-tertiary hover:text-white'
               )}
@@ -54,6 +48,15 @@ export function AppSidebar() {
             </Link>
           )
         })}
+        {user?.isAdmin && (
+          <Link
+            href="/admin"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/60 hover:bg-background-tertiary hover:text-white mt-4 border-t border-background-tertiary pt-4"
+          >
+            <Shield className="h-5 w-5 flex-shrink-0" />
+            Admin
+          </Link>
+        )}
       </nav>
 
       {/* User & Logout */}

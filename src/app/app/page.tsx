@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Mic, Hand, BookOpen, Flame, Clock, ArrowRight, Lightbulb } from 'lucide-react'
+import { Mic, Hand, BookOpen, Flame, Clock, ArrowRight, Lightbulb, FileText } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
 
@@ -14,16 +14,16 @@ export default function DashboardPage() {
   const quickActions = [
     {
       href: '/app/translate',
-      title: 'Live Captions',
-      subtitle: 'Real-time speech-to-text transcription',
-      icon: Mic,
-      gradient: 'from-emerald-600/20 to-emerald-900/10',
-    },
-    {
-      href: '/app/translate',
       title: 'Text to Sign',
       subtitle: 'Translate text to sign language with avatar',
       icon: Hand,
+      gradient: 'from-emerald-600/20 to-emerald-900/10',
+    },
+    {
+      href: '/app/transcripts',
+      title: 'Transcripts',
+      subtitle: 'Record and replay conversations',
+      icon: Mic,
       gradient: 'from-violet-600/20 to-violet-900/10',
     },
     {
@@ -32,6 +32,13 @@ export default function DashboardPage() {
       subtitle: 'Interactive lessons and courses',
       icon: BookOpen,
       gradient: 'from-blue-600/20 to-blue-900/10',
+    },
+    {
+      href: '/app/notes',
+      title: 'Notes',
+      subtitle: 'Capture vocabulary and ideas',
+      icon: FileText,
+      gradient: 'from-amber-600/20 to-amber-900/10',
     },
   ]
 
@@ -96,7 +103,7 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <section className="mb-10">
         <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {quickActions.map((action) => {
             const Icon = action.icon
             return (
