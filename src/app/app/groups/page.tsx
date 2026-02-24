@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Plus, Users, LogIn, Share2, Copy, Check } from 'lucide-react'
@@ -17,7 +17,7 @@ interface Group {
   members: { user: { id: string; name: string } }[]
 }
 
-export default function GroupsPage() {
+function GroupsPageContent() {
   const searchParams = useSearchParams()
   const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(true)
@@ -244,5 +244,17 @@ export default function GroupsPage() {
         </div>
       )}
     </>
+  )
+}
+
+export default function GroupsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center py-12">
+        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    }>
+      <GroupsPageContent />
+    </Suspense>
   )
 }
