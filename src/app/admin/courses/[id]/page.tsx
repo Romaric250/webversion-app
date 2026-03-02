@@ -299,7 +299,7 @@ export default function AdminCourseDetailPage() {
             <LessonContentEditor
               value={lessonForm.content}
               onChange={(v) => setLessonForm((p) => ({ ...p, content: v }))}
-              placeholder="Lesson content or instructions. Press '/' for formatting options."
+              placeholder="Lesson content or instructions. Select text for formatting options."
             />
           </div>
           <ImageUpload
@@ -349,7 +349,7 @@ export default function AdminCourseDetailPage() {
               <LessonContentEditor
                 value={lessonForm.content}
                 onChange={(v) => setLessonForm((p) => ({ ...p, content: v }))}
-                placeholder="Lesson content. Press '/' for formatting options."
+                placeholder="Lesson content. Select text for formatting options."
               />
             </div>
             <ImageUpload value={lessonForm.videoUrl} onChange={(url) => setLessonForm((p) => ({ ...p, videoUrl: url }))} label="Image / thumbnail" />
