@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import { API_BASE_URL } from '@/config/api'
+import { API_ENDPOINTS } from '@/config/api'
 
 export type FeedbackType = 'rating' | 'feature' | 'question' | 'general' | 'bug' | 'suggestion'
 
@@ -17,7 +17,7 @@ export const feedbackApi = {
     otherComments?: string
   }) => {
     const res = await apiClient.post<{ success: boolean }>(
-      `${API_BASE_URL}/feedback`,
+      API_ENDPOINTS.FEEDBACK,
       data
     )
     if (!res.data.success) throw new Error('Failed to submit feedback')

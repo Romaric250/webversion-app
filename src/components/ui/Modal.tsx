@@ -28,7 +28,7 @@ export function Modal({ isOpen, onClose, title, children, className, closable = 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 min-h-screen overflow-y-auto overscroll-contain"
       onClick={closable ? onClose : undefined}
     >
       <div
@@ -41,7 +41,7 @@ export function Modal({ isOpen, onClose, title, children, className, closable = 
         aria-labelledby="modal-title"
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          'relative w-full max-w-md max-h-[90vh] flex flex-col rounded-xl bg-background-secondary border border-background-tertiary shadow-xl my-2 sm:my-0',
+          'relative w-full max-w-md max-h-[85vh] flex flex-col rounded-xl bg-background-secondary border border-background-tertiary shadow-xl my-auto',
           className
         )}
       >

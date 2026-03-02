@@ -7,7 +7,7 @@ import { API_ENDPOINTS } from '@/config/api'
 import { Modal } from '@/components/ui/Modal'
 import { Toast } from '@/components/ui/Toast'
 import { ImageUpload } from '@/components/admin/ImageUpload'
-import { Plus, BookOpen } from 'lucide-react'
+import { Plus, BookOpen, Pencil, Trash2 } from 'lucide-react'
 
 interface Course {
   id: string
@@ -22,10 +22,15 @@ export default function AdminCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [createModal, setCreateModal] = useState(false)
+  const [editModal, setEditModal] = useState<Course | null>(null)
+  const [deleteModal, setDeleteModal] = useState<Course | null>(null)
   const [creating, setCreating] = useState(false)
+  const [updating, setUpdating] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
   const [thumbnail, setThumbnail] = useState('')
+  const [editForm, setEditForm] = useState({ title: '', desc: '', thumbnail: '', isPublished: false })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -68,6 +73,56 @@ export default function AdminCoursesPage() {
     }
   }
 
+  const openEditModal = (c: Course) => {
+    setEditModal(c)
+    setEditForm({
+      title: c.title,
+      desc: c.description || '',
+      thumbnail: c.thumbnailUrl || '',
+      isPublished: c.isPublished,
+    })
+  }
+
+  const updateCourse = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editModal) return
+    setUpdating(true)
+    setError(null)
+    try {
+      await apiClient.patch(API_ENDPOINTS.ADMIN.COURSE(editModal.id), {
+        title: editForm.title.trim(),
+        description: editForm.desc.trim() || null,
+        thumbnailUrl: editForm.thumbnail || null,
+        isPublished: editForm.isPublished,
+      })
+      setEditModal(null)
+      setSuccess('Course updated')
+      setTimeout(() => setSuccess(null), 3000)
+      fetchCourses()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const deleteCourse = async () => {
+    if (!deleteModal) return
+    setDeleting(true)
+    setError(null)
+    try {
+      await apiClient.delete(API_ENDPOINTS.ADMIN.COURSE(deleteModal.id))
+      setDeleteModal(null)
+      setSuccess('Course deleted')
+      setTimeout(() => setSuccess(null), 3000)
+      fetchCourses()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -91,36 +146,49 @@ export default function AdminCoursesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {courses.map((c) => (
-            <Link
+            <div
               key={c.id}
-              href={`/admin/courses/${c.id}`}
-              className="rounded-xl bg-background-secondary border border-background-tertiary p-5 hover:border-primary/30 transition-colors group"
+              className="rounded-xl bg-background-secondary border border-background-tertiary p-5 hover:border-primary/30 transition-colors group relative"
             >
-              <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-xl bg-background-tertiary flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  {c.thumbnailUrl ? (
-                    <img
-                      src={c.thumbnailUrl}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <BookOpen className="h-8 w-8 text-white/40" />
-                  )}
+              <Link href={`/admin/courses/${c.id}`} className="block">
+                <div className="flex items-start gap-4">
+                  <div className="w-16 h-16 rounded-xl bg-background-tertiary flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {c.thumbnailUrl ? (
+                      <img src={c.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <BookOpen className="h-8 w-8 text-white/40" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-white group-hover:text-primary transition-colors truncate">
+                      {c.title}
+                    </p>
+                    <p className="text-white/50 text-sm mt-0.5">
+                      {c.isPublished ? 'Published' : 'Draft'}
+                    </p>
+                    {c.description && (
+                      <p className="text-white/60 text-sm mt-2 line-clamp-2">{c.description}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-white group-hover:text-primary transition-colors truncate">
-                    {c.title}
-                  </p>
-                  <p className="text-white/50 text-sm mt-0.5">
-                    {c.isPublished ? 'Published' : 'Draft'}
-                  </p>
-                  {c.description && (
-                    <p className="text-white/60 text-sm mt-2 line-clamp-2">{c.description}</p>
-                  )}
-                </div>
+              </Link>
+              <div className="flex gap-1 mt-3 pt-3 border-t border-background-tertiary">
+                <button
+                  onClick={(e) => { e.preventDefault(); openEditModal(c) }}
+                  className="p-2 rounded-lg text-white/60 hover:text-primary hover:bg-primary/10"
+                  aria-label="Edit"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={(e) => { e.preventDefault(); setDeleteModal(c) }}
+                  className="p-2 rounded-lg text-white/60 hover:text-red-400 hover:bg-red-500/10"
+                  aria-label="Delete"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
@@ -173,6 +241,68 @@ export default function AdminCoursesPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal isOpen={!!editModal} onClose={() => setEditModal(null)} title="Edit course" className="max-w-md">
+        {editModal && (
+          <form onSubmit={updateCourse} className="space-y-4">
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Title</label>
+              <input
+                value={editForm.title}
+                onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white outline-none focus:border-primary/50"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Description</label>
+              <textarea
+                value={editForm.desc}
+                onChange={(e) => setEditForm((p) => ({ ...p, desc: e.target.value }))}
+                rows={3}
+                className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white resize-none outline-none focus:border-primary/50"
+              />
+            </div>
+            <ImageUpload value={editForm.thumbnail} onChange={(url) => setEditForm((p) => ({ ...p, thumbnail: url }))} label="Thumbnail" />
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="editPublished"
+                checked={editForm.isPublished}
+                onChange={(e) => setEditForm((p) => ({ ...p, isPublished: e.target.checked }))}
+                className="rounded"
+              />
+              <label htmlFor="editPublished" className="text-white/80 text-sm">Published (visible for enrollment)</label>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setEditModal(null)} className="flex-1 py-3 rounded-lg bg-background-tertiary text-white/80 hover:bg-background-elevated">
+                Cancel
+              </button>
+              <button type="submit" disabled={updating} className="flex-1 py-3 rounded-lg bg-primary text-background font-medium hover:bg-primary-dark disabled:opacity-50">
+                {updating ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal isOpen={!!deleteModal} onClose={() => setDeleteModal(null)} title="Delete course">
+        {deleteModal && (
+          <div className="space-y-4">
+            <p className="text-white/80">
+              Delete <strong className="text-white">{deleteModal.title}</strong>? All lessons will be removed. This cannot be undone.
+            </p>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setDeleteModal(null)} className="flex-1 py-3 rounded-lg bg-background-tertiary text-white/80 hover:bg-background-elevated">
+                Cancel
+              </button>
+              <button type="button" onClick={deleteCourse} disabled={deleting} className="flex-1 py-3 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 disabled:opacity-50">
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

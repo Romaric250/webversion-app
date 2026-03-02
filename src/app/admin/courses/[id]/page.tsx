@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Plus, BookOpen, GripVertical } from 'lucide-react'
+import { ArrowLeft, Plus, BookOpen, GripVertical, Pencil, Trash2 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { API_ENDPOINTS } from '@/config/api'
 import { Modal } from '@/components/ui/Modal'
@@ -16,6 +16,8 @@ interface Lesson {
   order: number
   content?: string | null
   videoUrl?: string | null
+  imageUrl?: string | null
+  quizContent?: unknown
 }
 
 interface Course {
@@ -34,7 +36,11 @@ export default function AdminCourseDetailPage() {
   const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
   const [addLessonModal, setAddLessonModal] = useState(false)
+  const [editLessonModal, setEditLessonModal] = useState<Lesson | null>(null)
+  const [deleteLessonModal, setDeleteLessonModal] = useState<Lesson | null>(null)
   const [addingLesson, setAddingLesson] = useState(false)
+  const [updatingLesson, setUpdatingLesson] = useState(false)
+  const [deletingLesson, setDeletingLesson] = useState(false)
   const [lessonForm, setLessonForm] = useState({
     title: '',
     content: '',
@@ -69,19 +75,23 @@ export default function AdminCourseDetailPage() {
     setAddingLesson(true)
     setError(null)
     try {
-      let content: string | null = lessonForm.content.trim() || null
+      let quizContent: unknown = null
       if (lessonForm.quiz.trim()) {
-        const quizLines = lessonForm.quiz.trim().split('\n').filter(Boolean)
-        content = JSON.stringify({
-          text: content,
-          quiz: quizLines,
-        })
+        try {
+          quizContent = JSON.parse(lessonForm.quiz.trim())
+        } catch {
+          setError('Quiz must be valid JSON. Example: {"questions":[{"id":"q1","question":{"text":"What is..."},"options":[{"id":"a1","text":"A","isCorrect":true},{"id":"a2","text":"B","isCorrect":false}]}]}')
+          setAddingLesson(false)
+          return
+        }
       }
       await apiClient.post(API_ENDPOINTS.ADMIN.COURSE_LESSONS(id), {
         title: lessonForm.title.trim(),
-        content,
+        content: lessonForm.content.trim() || null,
         videoUrl: lessonForm.videoUrl || null,
+        imageUrl: lessonForm.videoUrl || null,
         order: course?.lessons.length ?? 0,
+        quizContent,
       })
       setLessonForm({ title: '', content: '', videoUrl: '', quiz: '' })
       setAddLessonModal(false)
@@ -92,6 +102,67 @@ export default function AdminCourseDetailPage() {
       setError(e instanceof Error ? e.message : 'Failed to add lesson')
     } finally {
       setAddingLesson(false)
+    }
+  }
+
+  const openEditLesson = (l: Lesson) => {
+    setEditLessonModal(l)
+    setLessonForm({
+      title: l.title,
+      content: l.content || '',
+      videoUrl: l.imageUrl || l.videoUrl || '',
+      quiz: l.quizContent ? JSON.stringify(l.quizContent, null, 2) : '',
+    })
+  }
+
+  const updateLesson = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editLessonModal) return
+    setUpdatingLesson(true)
+    setError(null)
+    try {
+      let quizContent: unknown = null
+      if (lessonForm.quiz.trim()) {
+        try {
+          quizContent = JSON.parse(lessonForm.quiz.trim())
+        } catch {
+          setError('Quiz must be valid JSON')
+          setUpdatingLesson(false)
+          return
+        }
+      }
+      await apiClient.patch(`${API_ENDPOINTS.ADMIN.COURSE(id)}/lessons/${editLessonModal.id}`, {
+        title: lessonForm.title.trim(),
+        content: lessonForm.content.trim() || null,
+        videoUrl: lessonForm.videoUrl || null,
+        imageUrl: lessonForm.videoUrl || null,
+        quizContent,
+      })
+      setEditLessonModal(null)
+      setSuccess('Lesson updated')
+      setTimeout(() => setSuccess(null), 3000)
+      fetchCourse()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update')
+    } finally {
+      setUpdatingLesson(false)
+    }
+  }
+
+  const deleteLesson = async () => {
+    if (!deleteLessonModal) return
+    setDeletingLesson(true)
+    setError(null)
+    try {
+      await apiClient.delete(`${API_ENDPOINTS.ADMIN.COURSE(id)}/lessons/${deleteLessonModal.id}`)
+      setDeleteLessonModal(null)
+      setSuccess('Lesson deleted')
+      setTimeout(() => setSuccess(null), 3000)
+      fetchCourse()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete')
+    } finally {
+      setDeletingLesson(false)
     }
   }
 
@@ -199,6 +270,22 @@ export default function AdminCourseDetailPage() {
                       </p>
                     )}
                   </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => openEditLesson(l)}
+                      className="p-2 rounded-lg text-white/60 hover:text-primary hover:bg-primary/10"
+                      aria-label="Edit"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteLessonModal(l)}
+                      className="p-2 rounded-lg text-white/60 hover:text-red-400 hover:bg-red-500/10"
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               ))}
           </div>
@@ -238,13 +325,13 @@ export default function AdminCourseDetailPage() {
             label="Image / thumbnail (optional)"
           />
           <div>
-            <label className="block text-white/80 text-sm font-medium mb-2">Quiz (optional)</label>
+            <label className="block text-white/80 text-sm font-medium mb-2">Quiz - MCQ JSON (optional)</label>
             <textarea
               value={lessonForm.quiz}
               onChange={(e) => setLessonForm((p) => ({ ...p, quiz: e.target.value }))}
-              placeholder="One question per line"
-              rows={3}
-              className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 resize-none outline-none focus:border-primary/50"
+              placeholder='{"questions":[{"id":"q1","question":{"text":"Question?","image":null},"options":[{"id":"a1","text":"A","image":null,"isCorrect":true},{"id":"a2","text":"B","image":null,"isCorrect":false}]}]}'
+              rows={4}
+              className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 resize-none outline-none focus:border-primary/50 font-mono text-xs"
             />
           </div>
           <div className="flex gap-2 pt-2">
@@ -264,6 +351,67 @@ export default function AdminCourseDetailPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal isOpen={!!editLessonModal} onClose={() => setEditLessonModal(null)} title="Edit lesson" className="max-w-lg">
+        {editLessonModal && (
+          <form onSubmit={updateLesson} className="space-y-4">
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Title</label>
+              <input
+                value={lessonForm.title}
+                onChange={(e) => setLessonForm((p) => ({ ...p, title: e.target.value }))}
+                className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white outline-none focus:border-primary/50"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Content</label>
+              <textarea
+                value={lessonForm.content}
+                onChange={(e) => setLessonForm((p) => ({ ...p, content: e.target.value }))}
+                rows={3}
+                className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white resize-none outline-none focus:border-primary/50"
+              />
+            </div>
+            <ImageUpload value={lessonForm.videoUrl} onChange={(url) => setLessonForm((p) => ({ ...p, videoUrl: url }))} label="Image / thumbnail" />
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Quiz (MCQ JSON)</label>
+              <textarea
+                value={lessonForm.quiz}
+                onChange={(e) => setLessonForm((p) => ({ ...p, quiz: e.target.value }))}
+                rows={4}
+                className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white font-mono text-xs resize-none outline-none focus:border-primary/50"
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setEditLessonModal(null)} className="flex-1 py-3 rounded-lg bg-background-tertiary text-white/80 hover:bg-background-elevated">
+                Cancel
+              </button>
+              <button type="submit" disabled={updatingLesson} className="flex-1 py-3 rounded-lg bg-primary text-background font-medium hover:bg-primary-dark disabled:opacity-50">
+                {updatingLesson ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal isOpen={!!deleteLessonModal} onClose={() => setDeleteLessonModal(null)} title="Delete lesson">
+        {deleteLessonModal && (
+          <div className="space-y-4">
+            <p className="text-white/80">
+              Delete <strong className="text-white">{deleteLessonModal.title}</strong>? This cannot be undone.
+            </p>
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setDeleteLessonModal(null)} className="flex-1 py-3 rounded-lg bg-background-tertiary text-white/80 hover:bg-background-elevated">
+                Cancel
+              </button>
+              <button type="button" onClick={deleteLesson} disabled={deletingLesson} className="flex-1 py-3 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 disabled:opacity-50">
+                {deletingLesson ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

@@ -6,13 +6,21 @@ import { API_ENDPOINTS } from '@/config/api'
 import { Modal } from '@/components/ui/Modal'
 import { MessageSquare, Star, User, Mail } from 'lucide-react'
 
+interface FeedbackMetadata {
+  usageFrequency?: string | null
+  device?: string | null
+  experience?: string | null
+  improvements?: string | null
+  otherComments?: string | null
+}
+
 interface Feedback {
   id: string
   type: string
   category: string | null
   rating: number | null
   content: string | null
-  metadata: unknown
+  metadata: FeedbackMetadata | null
   createdAt: string
   user: { id: string; name: string; email: string }
 }
@@ -146,10 +154,46 @@ export default function AdminFeedbackPage() {
             {detailModal.content && (
               <div>
                 <p className="text-white/60 text-sm font-medium mb-1">Message</p>
-                <p className="text-white/90">{detailModal.content}</p>
+                <p className="text-white/90 whitespace-pre-wrap">{detailModal.content}</p>
               </div>
             )}
-            <p className="text-white/40 text-xs">
+            {detailModal.metadata && (
+              <div className="space-y-3 pt-2 border-t border-background-tertiary">
+                {(detailModal.metadata as FeedbackMetadata).experience && (
+                  <div>
+                    <p className="text-white/50 text-xs font-medium mb-0.5">Experience</p>
+                    <p className="text-white/80 text-sm whitespace-pre-wrap">{(detailModal.metadata as FeedbackMetadata).experience}</p>
+                  </div>
+                )}
+                {(detailModal.metadata as FeedbackMetadata).improvements && (
+                  <div>
+                    <p className="text-white/50 text-xs font-medium mb-0.5">Improvements</p>
+                    <p className="text-white/80 text-sm whitespace-pre-wrap">{(detailModal.metadata as FeedbackMetadata).improvements}</p>
+                  </div>
+                )}
+                {(detailModal.metadata as FeedbackMetadata).otherComments && (
+                  <div>
+                    <p className="text-white/50 text-xs font-medium mb-0.5">Other comments</p>
+                    <p className="text-white/80 text-sm whitespace-pre-wrap">{(detailModal.metadata as FeedbackMetadata).otherComments}</p>
+                  </div>
+                )}
+                {((detailModal.metadata as FeedbackMetadata).usageFrequency || (detailModal.metadata as FeedbackMetadata).device) && (
+                  <div className="flex flex-wrap gap-2">
+                    {(detailModal.metadata as FeedbackMetadata).usageFrequency && (
+                      <span className="px-2 py-1 rounded bg-background-tertiary text-white/70 text-xs">
+                        Usage: {(detailModal.metadata as FeedbackMetadata).usageFrequency}
+                      </span>
+                    )}
+                    {(detailModal.metadata as FeedbackMetadata).device && (
+                      <span className="px-2 py-1 rounded bg-background-tertiary text-white/70 text-xs">
+                        Device: {(detailModal.metadata as FeedbackMetadata).device}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            <p className="text-white/40 text-xs pt-2">
               {new Date(detailModal.createdAt).toLocaleString()}
             </p>
           </div>
