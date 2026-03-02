@@ -74,6 +74,9 @@ export const learningApi = {
     )
     return { alreadyEnrolled: data.alreadyEnrolled }
   },
+  unenroll: async (courseId: string): Promise<void> => {
+    await apiClient.delete(API_ENDPOINTS.LEARNING.UNENROLL(courseId))
+  },
   getEnrolledCourse: async (courseId: string): Promise<Course & { enrollment?: { enrolledAt: string; completedAt: string | null }; lessonProgress?: Record<string, LessonProgress> } | null> => {
     const { data } = await apiClient.get<{ success: boolean; data: Course & { enrollment?: { enrolledAt: string; completedAt: string | null }; lessonProgress?: Record<string, LessonProgress> } }>(
       API_ENDPOINTS.LEARNING.MY_COURSE(courseId)

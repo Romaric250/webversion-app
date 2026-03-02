@@ -60,6 +60,7 @@ export const API_ENDPOINTS = {
       `/learning/courses/${courseId}/lessons/${lessonId}`,
     ENROLLMENTS: '/learning/enrollments',
     ENROLL: (courseId: string) => `/learning/courses/${courseId}/enroll`,
+    UNENROLL: (courseId: string) => `/learning/courses/${courseId}/enroll`,
     MY_COURSE: (id: string) => `/learning/my-courses/${id}`,
     LESSON_COMPLETE: (lessonId: string) => `/learning/lessons/${lessonId}/complete`,
     LESSON_PROGRESS: (lessonId: string) => `/learning/lessons/${lessonId}/progress`,

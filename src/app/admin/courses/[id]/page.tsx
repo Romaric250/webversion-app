@@ -9,6 +9,8 @@ import { API_ENDPOINTS } from '@/config/api'
 import { Modal } from '@/components/ui/Modal'
 import { Toast } from '@/components/ui/Toast'
 import { ImageUpload } from '@/components/admin/ImageUpload'
+import { LessonContentEditor } from '@/components/admin/LessonContentEditor'
+import { QuizForm, type QuizContent } from '@/components/admin/QuizForm'
 
 interface Lesson {
   id: string
@@ -45,7 +47,7 @@ export default function AdminCourseDetailPage() {
     title: '',
     content: '',
     videoUrl: '',
-    quiz: '',
+    quiz: null as QuizContent | null,
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -75,16 +77,7 @@ export default function AdminCourseDetailPage() {
     setAddingLesson(true)
     setError(null)
     try {
-      let quizContent: unknown = null
-      if (lessonForm.quiz.trim()) {
-        try {
-          quizContent = JSON.parse(lessonForm.quiz.trim())
-        } catch {
-          setError('Quiz must be valid JSON. Example: {"questions":[{"id":"q1","question":{"text":"What is..."},"options":[{"id":"a1","text":"A","isCorrect":true},{"id":"a2","text":"B","isCorrect":false}]}]}')
-          setAddingLesson(false)
-          return
-        }
-      }
+      const quizContent = lessonForm.quiz?.questions?.length ? lessonForm.quiz : null
       await apiClient.post(API_ENDPOINTS.ADMIN.COURSE_LESSONS(id), {
         title: lessonForm.title.trim(),
         content: lessonForm.content.trim() || null,
@@ -93,7 +86,7 @@ export default function AdminCourseDetailPage() {
         order: course?.lessons.length ?? 0,
         quizContent,
       })
-      setLessonForm({ title: '', content: '', videoUrl: '', quiz: '' })
+      setLessonForm({ title: '', content: '', videoUrl: '', quiz: null })
       setAddLessonModal(false)
       setSuccess('Lesson added')
       setTimeout(() => setSuccess(null), 3000)
@@ -107,11 +100,12 @@ export default function AdminCourseDetailPage() {
 
   const openEditLesson = (l: Lesson) => {
     setEditLessonModal(l)
+    const q = l.quizContent as QuizContent | null
     setLessonForm({
       title: l.title,
       content: l.content || '',
       videoUrl: l.imageUrl || l.videoUrl || '',
-      quiz: l.quizContent ? JSON.stringify(l.quizContent, null, 2) : '',
+      quiz: q?.questions?.length ? q : null,
     })
   }
 
@@ -121,16 +115,7 @@ export default function AdminCourseDetailPage() {
     setUpdatingLesson(true)
     setError(null)
     try {
-      let quizContent: unknown = null
-      if (lessonForm.quiz.trim()) {
-        try {
-          quizContent = JSON.parse(lessonForm.quiz.trim())
-        } catch {
-          setError('Quiz must be valid JSON')
-          setUpdatingLesson(false)
-          return
-        }
-      }
+      const quizContent = lessonForm.quiz?.questions?.length ? lessonForm.quiz : null
       await apiClient.patch(`${API_ENDPOINTS.ADMIN.COURSE(id)}/lessons/${editLessonModal.id}`, {
         title: lessonForm.title.trim(),
         content: lessonForm.content.trim() || null,
@@ -296,7 +281,7 @@ export default function AdminCourseDetailPage() {
         isOpen={addLessonModal}
         onClose={() => setAddLessonModal(false)}
         title="Add lesson"
-        className="max-w-lg"
+        className="max-w-4xl max-h-[90vh]"
       >
         <form onSubmit={addLesson} className="space-y-4">
           <div>
@@ -311,12 +296,10 @@ export default function AdminCourseDetailPage() {
           </div>
           <div>
             <label className="block text-white/80 text-sm font-medium mb-2">Content (optional)</label>
-            <textarea
+            <LessonContentEditor
               value={lessonForm.content}
-              onChange={(e) => setLessonForm((p) => ({ ...p, content: e.target.value }))}
-              placeholder="Lesson content or instructions"
-              rows={3}
-              className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 resize-none outline-none focus:border-primary/50"
+              onChange={(v) => setLessonForm((p) => ({ ...p, content: v }))}
+              placeholder="Lesson content or instructions. Press '/' for formatting options."
             />
           </div>
           <ImageUpload
@@ -325,13 +308,9 @@ export default function AdminCourseDetailPage() {
             label="Image / thumbnail (optional)"
           />
           <div>
-            <label className="block text-white/80 text-sm font-medium mb-2">Quiz - MCQ JSON (optional)</label>
-            <textarea
+            <QuizForm
               value={lessonForm.quiz}
-              onChange={(e) => setLessonForm((p) => ({ ...p, quiz: e.target.value }))}
-              placeholder='{"questions":[{"id":"q1","question":{"text":"Question?","image":null},"options":[{"id":"a1","text":"A","image":null,"isCorrect":true},{"id":"a2","text":"B","image":null,"isCorrect":false}]}]}'
-              rows={4}
-              className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 resize-none outline-none focus:border-primary/50 font-mono text-xs"
+              onChange={(v) => setLessonForm((p) => ({ ...p, quiz: v }))}
             />
           </div>
           <div className="flex gap-2 pt-2">
@@ -353,7 +332,7 @@ export default function AdminCourseDetailPage() {
         </form>
       </Modal>
 
-      <Modal isOpen={!!editLessonModal} onClose={() => setEditLessonModal(null)} title="Edit lesson" className="max-w-lg">
+      <Modal isOpen={!!editLessonModal} onClose={() => setEditLessonModal(null)} title="Edit lesson" className="max-w-4xl max-h-[90vh]">
         {editLessonModal && (
           <form onSubmit={updateLesson} className="space-y-4">
             <div>
@@ -367,21 +346,17 @@ export default function AdminCourseDetailPage() {
             </div>
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Content</label>
-              <textarea
+              <LessonContentEditor
                 value={lessonForm.content}
-                onChange={(e) => setLessonForm((p) => ({ ...p, content: e.target.value }))}
-                rows={3}
-                className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white resize-none outline-none focus:border-primary/50"
+                onChange={(v) => setLessonForm((p) => ({ ...p, content: v }))}
+                placeholder="Lesson content. Press '/' for formatting options."
               />
             </div>
             <ImageUpload value={lessonForm.videoUrl} onChange={(url) => setLessonForm((p) => ({ ...p, videoUrl: url }))} label="Image / thumbnail" />
             <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Quiz (MCQ JSON)</label>
-              <textarea
+              <QuizForm
                 value={lessonForm.quiz}
-                onChange={(e) => setLessonForm((p) => ({ ...p, quiz: e.target.value }))}
-                rows={4}
-                className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white font-mono text-xs resize-none outline-none focus:border-primary/50"
+                onChange={(v) => setLessonForm((p) => ({ ...p, quiz: v }))}
               />
             </div>
             <div className="flex gap-2 pt-2">
