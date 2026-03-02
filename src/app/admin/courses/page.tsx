@@ -155,7 +155,6 @@ export default function AdminCoursesPage() {
             value={thumbnail}
             onChange={setThumbnail}
             label="Thumbnail (optional)"
-            placeholder="Upload course thumbnail"
           />
           <div className="flex gap-2 pt-2">
             <button

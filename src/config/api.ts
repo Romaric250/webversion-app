@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
   SIGNS: {
     LIST: '/signs',
     SEARCH: '/signs/search',
+    BY_ID: (id: string) => `/signs/${id}`,
     FAVORITES: '/signs/favorites',
   },
   TRANSLATE: {
@@ -65,7 +66,10 @@ export const API_ENDPOINTS = {
     USER_SUBSCRIPTION: (id: string) => `/admin/users/${id}/subscription`,
     USER_ADMIN: (id: string) => `/admin/users/${id}/admin`,
     SIGNS: '/admin/signs',
+    SIGN: (id: string) => `/admin/signs/${id}`,
     COURSES: '/admin/courses',
+    COURSE: (id: string) => `/admin/courses/${id}`,
+    COURSE_LESSONS: (courseId: string) => `/admin/courses/${courseId}/lessons`,
     FEEDBACK: '/admin/feedback',
   },
   PROGRESS: {
