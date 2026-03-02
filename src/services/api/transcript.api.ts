@@ -54,4 +54,19 @@ export const transcriptApi = {
     const data = await res.json()
     return data.data || []
   },
+
+  deleteTranscript: async (id: string): Promise<void> => {
+    const token = getAuthToken()
+    if (!token) throw new Error('You must be logged in to delete transcripts')
+
+    const res = await fetch(`${TRANSCRIPTS_URL}/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || err.message || 'Failed to delete transcript')
+    }
+  },
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, Mic, Square, Loader2, MoreVertical, Trash2, LogOut, Share2, Copy, Check, Edit2, Pause, X } from 'lucide-react'
+import { ArrowLeft, Send, Mic, Square, Loader2, MoreVertical, Trash2, LogOut, Share2, Copy, Check, Edit2, Pause, X, Users } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { API_BASE_URL } from '@/config/api'
 import { getAuthToken } from '@/lib/storage'
@@ -42,6 +42,7 @@ export default function GroupChatPage() {
   const id = String(params.id)
   const [groupName, setGroupName] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -52,6 +53,11 @@ export default function GroupChatPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [membersOpen, setMembersOpen] = useState(false)
+  const [members, setMembers] = useState<{ userId: string; role: string; user?: { id: string; name: string } }[]>([])
+  const [messageMenuId, setMessageMenuId] = useState<string | null>(null)
+  const [editMessageId, setEditMessageId] = useState<string | null>(null)
+  const [editMessageContent, setEditMessageContent] = useState('')
   const [editName, setEditName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [copied, setCopied] = useState(false)
@@ -79,6 +85,7 @@ export default function GroupChatPage() {
       }
       const data = await res.json()
       setMessages(data.data || [])
+      setTotalCount(data.pagination?.total ?? data.data?.length ?? 0)
     } catch {
       router.replace('/app/groups')
     } finally {
@@ -88,12 +95,13 @@ export default function GroupChatPage() {
 
   const fetchGroup = async () => {
     try {
-      const { data } = await apiClient.get<{ success: boolean; data: { name: string; inviteCode: string; members: { userId: string; role: string; user?: { id: string } }[] } }>(
+      const { data } = await apiClient.get<{ success: boolean; data: { name: string; inviteCode: string; members: { userId: string; role: string; user?: { id: string; name: string } }[] } }>(
         `${API_BASE_URL}/groups/${id}`
       )
       if (data.success) {
         setGroupName(data.data.name)
         setInviteCode(data.data.inviteCode || '')
+        setMembers(data.data.members || [])
         const myMember = data.data.members?.find((m: any) => m.userId === user?.id || m.user?.id === user?.id)
         setIsAdmin(myMember?.role === 'admin')
       }
@@ -117,7 +125,15 @@ export default function GroupChatPage() {
     const socket = getGroupSocket(token)
     if (!socket) return
     socket.emit('group:join', id)
-    socket.on('group:message', (msg: Message) => {
+    socket.on('group:message', (msg: Message & { _action?: string }) => {
+      if (msg._action === 'delete') {
+        setMessages((prev) => prev.filter((m) => m.id !== msg.id))
+        return
+      }
+      if (msg._action === 'update') {
+        setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, ...msg } : m)))
+        return
+      }
       if (msg.user?.id === user?.id) return
       setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]))
     })
@@ -136,7 +152,10 @@ export default function GroupChatPage() {
         `${API_BASE_URL}/groups/${id}/messages`,
         { content: input.trim() }
       )
-      if (data.success) setMessages((prev) => [...prev, data.data])
+      if (data.success) {
+        setMessages((prev) => [...prev, data.data])
+        setTotalCount((prev) => prev + 1)
+      }
       setInput('')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to send message')
@@ -294,6 +313,42 @@ export default function GroupChatPage() {
     setMenuOpen(false)
   }
 
+  const handleDeleteMessage = async (messageId: string) => {
+    setMessageMenuId(null)
+    try {
+      await apiClient.delete(`${API_BASE_URL}/groups/${id}/messages/${messageId}`)
+      setMessages((prev) => prev.filter((m) => m.id !== messageId))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete message')
+    }
+  }
+
+  const openEditMessage = (m: Message) => {
+    setEditMessageId(m.id)
+    setEditMessageContent(m.content)
+    setMessageMenuId(null)
+  }
+
+  const handleUpdateMessage = async () => {
+    if (!editMessageId || !editMessageContent.trim()) {
+      setEditMessageId(null)
+      return
+    }
+    try {
+      const { data } = await apiClient.patch<{ success: boolean; data: Message }>(
+        `${API_BASE_URL}/groups/${id}/messages/${editMessageId}`,
+        { content: editMessageContent.trim() }
+      )
+      if (data.success) {
+        setMessages((prev) => prev.map((m) => (m.id === editMessageId ? data.data : m)))
+        setEditMessageId(null)
+        setEditMessageContent('')
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update message')
+    }
+  }
+
   const handleLeaveGroup = async () => {
     try {
       await apiClient.post(`${API_BASE_URL}/groups/${id}/leave`)
@@ -304,6 +359,16 @@ export default function GroupChatPage() {
     setMenuOpen(false)
   }
 
+  const handleRemoveMember = async (userId: string) => {
+    try {
+      await apiClient.delete(`${API_BASE_URL}/groups/${id}/members/${userId}`)
+      setMembers((prev) => prev.filter((m) => m.userId !== userId))
+      setMembersOpen(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to remove member')
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
@@ -311,15 +376,15 @@ export default function GroupChatPage() {
   }, [])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <div className="flex items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-4">
-          <Link href="/app/groups" className="p-2 rounded-lg text-white/60 hover:bg-background-secondary hover:text-white">
+    <div className="flex flex-col h-[calc(100vh-7rem)] sm:h-[calc(100vh-8rem)] min-h-0">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 mb-4 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <Link href="/app/groups" className="p-2 rounded-lg text-white/60 hover:bg-background-secondary hover:text-white flex-shrink-0 sm:hidden">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <div>
-            <h1 className="text-xl font-bold text-white">{groupName || 'Group Chat'}</h1>
-            <p className="text-white/50 text-sm">{messages.length} messages</p>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-white truncate">{groupName || 'Group Chat'}</h1>
+            <p className="text-white/50 text-sm">{totalCount || messages.length} messages</p>
           </div>
         </div>
         <div className="relative">
@@ -341,13 +406,22 @@ export default function GroupChatPage() {
                   Share group
                 </button>
                 {isAdmin && (
-                  <button
-                    onClick={openEdit}
-                    className="w-full flex items-center gap-2 px-4 py-2 text-white/80 hover:bg-background-tertiary text-left text-sm"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                    Edit name
-                  </button>
+                  <>
+                    <button
+                      onClick={openEdit}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-white/80 hover:bg-background-tertiary text-left text-sm"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                      Edit name
+                    </button>
+                    <button
+                      onClick={() => { setMembersOpen(true); setMenuOpen(false) }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-white/80 hover:bg-background-tertiary text-left text-sm"
+                    >
+                      <Users className="h-4 w-4" />
+                      Manage members
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={handleLeaveGroup}
@@ -397,6 +471,53 @@ export default function GroupChatPage() {
         </div>
       </Modal>
 
+      <Modal isOpen={editMessageId !== null} onClose={() => { setEditMessageId(null); setEditMessageContent('') }} title="Edit message">
+        <div className="space-y-4">
+          <textarea
+            value={editMessageContent}
+            onChange={(e) => setEditMessageContent(e.target.value)}
+            placeholder="Message content"
+            rows={4}
+            className="w-full px-4 py-3 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50 resize-none"
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button onClick={handleUpdateMessage} disabled={!editMessageContent.trim()} className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-background font-medium disabled:opacity-50">
+              Save
+            </button>
+            <button onClick={() => { setEditMessageId(null); setEditMessageContent('') }} className="px-4 py-2.5 rounded-lg bg-background-tertiary text-white/80">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={membersOpen} onClose={() => setMembersOpen(false)} title="Manage members">
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {members.map((m) => (
+            <div key={m.userId} className="flex items-center justify-between py-2 border-b border-background-tertiary last:border-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
+                  {m.user?.name?.charAt(0) || '?'}
+                </div>
+                <div>
+                  <p className="font-medium text-white">{m.user?.name || 'Unknown'}</p>
+                  <p className="text-white/50 text-xs">{m.role}</p>
+                </div>
+              </div>
+              {isAdmin && m.userId !== user?.id && (
+                <button
+                  onClick={() => handleRemoveMember(m.userId)}
+                  className="px-3 py-1.5 rounded-lg text-red-400 hover:bg-red-500/10 text-sm"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </Modal>
+
       <Modal isOpen={shareOpen} onClose={() => setShareOpen(false)} title="Share group">
         <div className="space-y-4">
           <p className="text-white/60 text-sm">Share this link or invite code so others can join</p>
@@ -433,33 +554,70 @@ export default function GroupChatPage() {
         ) : (
           messages.map((m) => {
             const isOwn = m.user?.id === user?.id
+            const canModify = isOwn || isAdmin
+            const menuOpenForThis = messageMenuId === m.id
             return (
             <div
               key={m.id}
-              className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}
+              className={`flex gap-2 sm:gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}
             >
-              <div className="w-9 h-9 rounded-full bg-background-tertiary flex items-center justify-center flex-shrink-0 text-white/80 text-sm font-semibold">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-background-tertiary flex items-center justify-center flex-shrink-0 text-white/80 text-sm font-semibold">
                 {m.user.name?.charAt(0) || '?'}
               </div>
               <div className={`flex-1 min-w-0 max-w-[85%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
                 <p className={`text-xs font-medium text-white/50 px-1 ${isOwn ? 'text-right' : 'text-left'}`}>
                   {m.user.name}
                 </p>
-                <div
-                  className={`rounded-2xl px-4 py-3 ${
-                    isOwn
-                      ? 'bg-indigo-600/90 text-white rounded-br-md'
-                      : 'bg-background-secondary border border-background-tertiary text-white/90 rounded-bl-md'
-                  }`}
-                >
-                  <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
-                    {m.content}
-                  </p>
-                  {m.type === 'voice' && m.rawContent && m.rawContent !== m.content && (
-                    <details className="mt-2">
-                      <summary className="text-xs text-white/70 cursor-pointer">View raw</summary>
-                      <p className="mt-1 text-xs text-white/60">{m.rawContent}</p>
-                    </details>
+                <div className={`flex gap-1 ${isOwn ? 'flex-row-reverse' : ''}`}>
+                  <div
+                    className={`rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 ${
+                      isOwn
+                        ? 'bg-indigo-600/90 text-white rounded-br-md'
+                        : 'bg-background-secondary border border-background-tertiary text-white/90 rounded-bl-md'
+                    }`}
+                  >
+                    <p className="text-[14px] sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words">
+                      {m.content}
+                    </p>
+                    {m.type === 'voice' && m.rawContent && m.rawContent !== m.content && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-white/70 cursor-pointer">View raw</summary>
+                        <p className="mt-1 text-xs text-white/60">{m.rawContent}</p>
+                      </details>
+                    )}
+                  </div>
+                  {canModify && (
+                    <div className="relative flex-shrink-0">
+                      <button
+                        onClick={() => setMessageMenuId(menuOpenForThis ? null : m.id)}
+                        className="p-1.5 rounded-lg text-white/40 hover:bg-background-tertiary hover:text-white transition-colors"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                      {menuOpenForThis && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setMessageMenuId(null)} />
+                          <div className={`absolute z-20 py-1 rounded-lg bg-background-secondary border border-background-tertiary shadow-xl min-w-[120px] ${isOwn ? 'right-0' : 'left-0'}`}>
+                            {isOwn && (
+                              <button
+                                onClick={() => openEditMessage(m)}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-white/80 hover:bg-background-tertiary text-left text-sm"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                                Edit
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteMessage(m.id)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-500/10 text-left text-sm"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                 </div>
                 <p className={`text-white/40 text-xs px-1 ${isOwn ? 'text-right' : 'text-left'}`}>{formatTime(m.createdAt)}</p>
@@ -489,62 +647,70 @@ export default function GroupChatPage() {
         </div>
       )}
 
-      <div className="flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendText()}
-          placeholder="Type a message..."
-          className="flex-1 px-4 py-3 rounded-xl bg-background-secondary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50"
-          disabled={sending || recording || transcribing}
-        />
-        {!recording && !transcribing ? (
-          <>
-            <button
-              onClick={startRecording}
-              className="p-3 rounded-xl bg-background-secondary border border-background-tertiary text-white hover:bg-background-tertiary transition-colors"
-              title="Record voice"
-            >
-              <Mic className="h-5 w-5" />
-            </button>
-            <button
-              onClick={sendText}
-              disabled={!input.trim() || sending}
-              className="p-3 rounded-xl bg-primary text-background hover:bg-primary-dark disabled:opacity-50 transition-colors"
-            >
-              <Send className="h-5 w-5" />
-            </button>
-          </>
-        ) : recording ? (
-          <div className="flex gap-2">
-            <button
-              onClick={togglePauseRecording}
-              className="p-3 rounded-xl bg-background-secondary border border-background-tertiary text-white hover:bg-background-tertiary transition-colors"
-              title={recordingPaused ? "Resume" : "Pause"}
-            >
-              <Pause className="h-5 w-5" />
-            </button>
-            <button
-              onClick={stopRecording}
-              className="p-3 rounded-xl bg-primary text-background hover:bg-primary-dark transition-colors"
-              title="Finish and transcribe"
-            >
-              <Square className="h-5 w-5" fill="currentColor" />
-            </button>
-            <button
-              onClick={cancelRecording}
-              className="p-3 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
-              title="Cancel"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        ) : (
-          <span className="flex items-center gap-2 px-4 py-3 text-white/60">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            Transcribing...
-          </span>
-        )}
+      <div className="flex flex-col gap-2 flex-shrink-0">
+        <div className="flex gap-2 items-end">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                sendText()
+              }
+            }}
+            placeholder="Type a message..."
+            rows={1}
+            className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-background-secondary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50 resize-y min-h-[44px] max-h-[120px] overflow-y-auto"
+            disabled={sending || recording || transcribing}
+          />
+          {!recording && !transcribing ? (
+            <>
+              <button
+                onClick={startRecording}
+                className="p-3 rounded-xl bg-background-secondary border border-background-tertiary text-white hover:bg-background-tertiary transition-colors flex-shrink-0"
+                title="Record voice"
+              >
+                <Mic className="h-5 w-5" />
+              </button>
+              <button
+                onClick={sendText}
+                disabled={!input.trim() || sending}
+                className="p-3 rounded-xl bg-primary text-background hover:bg-primary-dark disabled:opacity-50 transition-colors flex-shrink-0"
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            </>
+          ) : recording ? (
+            <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
+              <button
+                onClick={togglePauseRecording}
+                className="p-2.5 sm:p-3 rounded-xl bg-background-secondary border border-background-tertiary text-white hover:bg-background-tertiary transition-colors"
+                title={recordingPaused ? "Resume" : "Pause"}
+              >
+                <Pause className="h-5 w-5" />
+              </button>
+              <button
+                onClick={stopRecording}
+                className="p-2.5 sm:p-3 rounded-xl bg-primary text-background hover:bg-primary-dark transition-colors"
+                title="Finish and transcribe"
+              >
+                <Square className="h-5 w-5" fill="currentColor" />
+              </button>
+              <button
+                onClick={cancelRecording}
+                className="p-2.5 sm:p-3 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                title="Cancel"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          ) : (
+            <span className="flex items-center gap-2 px-3 py-3 text-white/60 flex-shrink-0">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="hidden sm:inline">Transcribing...</span>
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )

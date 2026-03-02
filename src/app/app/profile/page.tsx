@@ -1,18 +1,28 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Save, Loader2 } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { Save, Loader2, MessageSquare } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Toast } from '@/components/ui/Toast'
 import { userApi } from '@/services/api/user.api'
+import { FeedbackModal } from '@/components/ui/FeedbackModal'
 
 export default function ProfilePage() {
+  const searchParams = useSearchParams()
   const { user, setUser } = useAuthStore()
   const [name, setName] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('feedback') === '1') {
+      setFeedbackOpen(true)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (user) {
@@ -94,6 +104,22 @@ export default function ProfilePage() {
         </div>
 
         <div className="card p-6">
+          <h3 className="font-semibold text-white mb-2 flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Feedback
+          </h3>
+          <p className="text-white/60 text-sm mb-4">
+            Your feedback helps us improve SignNova. Share your thoughts, report bugs, or suggest new features.
+          </p>
+          <button
+            onClick={() => setFeedbackOpen(true)}
+            className="px-5 py-2.5 rounded-lg bg-primary text-background font-medium hover:bg-primary-dark transition-colors"
+          >
+            Give feedback
+          </button>
+        </div>
+
+        <div className="card p-6">
           <h3 className="font-semibold text-white mb-4">Account</h3>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between items-center py-2 border-b border-background-tertiary">
@@ -103,6 +129,8 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </>
   )
 }

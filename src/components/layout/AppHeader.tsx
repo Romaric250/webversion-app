@@ -3,15 +3,15 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X, LogOut } from 'lucide-react'
+import { Menu, X, LogOut, Shield } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { navItems, isActive } from '@/lib/nav'
+import { navItems, footerNavItems, isActive } from '@/lib/nav'
 import { cn } from '@/lib/utils'
 
 export function AppHeader() {
   const pathname = usePathname()
   const router = useRouter()
-  const { logout } = useAuthStore()
+  const { user, logout } = useAuthStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleLogout = async () => {
@@ -64,6 +64,39 @@ export function AppHeader() {
                 </Link>
               )
             })}
+            <div className="my-2 border-t border-background-tertiary" />
+            {footerNavItems.map((item) => {
+              const Icon = item.icon
+              const basePath = item.href.split('?')[0].split('#')[0]
+              const active = pathname === basePath || pathname.startsWith(basePath + '/')
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium',
+                    active ? 'bg-primary/15 text-primary' : 'text-white/60 hover:bg-background-tertiary'
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                </Link>
+              )
+            })}
+            {user?.isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium',
+                  pathname.startsWith('/admin') ? 'bg-primary/15 text-primary' : 'text-white/60 hover:bg-background-tertiary'
+                )}
+              >
+                <Shield className="h-5 w-5" />
+                Admin
+              </Link>
+            )}
             <div className="my-2 border-t border-background-tertiary" />
             <button
               onClick={handleLogout}

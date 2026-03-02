@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Users, BookOpen, Search, Shield } from 'lucide-react'
+import { LayoutDashboard, Users, BookOpen, Search, Shield, MessageSquare } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { cn } from '@/lib/utils'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, isAuthenticated, isLoading } = useAuthStore()
 
   useEffect(() => {
@@ -37,31 +39,63 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <nav className="space-y-1">
           <Link
             href="/admin"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-background-tertiary hover:text-white"
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+              pathname === '/admin'
+                ? 'bg-primary/15 text-primary border border-primary/20'
+                : 'text-white/70 hover:bg-background-tertiary hover:text-white border border-transparent'
+            )}
           >
             <LayoutDashboard className="h-5 w-5" />
             Dashboard
           </Link>
           <Link
             href="/admin/users"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-background-tertiary hover:text-white"
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+              pathname.startsWith('/admin/users')
+                ? 'bg-primary/15 text-primary border border-primary/20'
+                : 'text-white/70 hover:bg-background-tertiary hover:text-white border border-transparent'
+            )}
           >
             <Users className="h-5 w-5" />
             Users
           </Link>
           <Link
             href="/admin/courses"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-background-tertiary hover:text-white"
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+              pathname.startsWith('/admin/courses')
+                ? 'bg-primary/15 text-primary border border-primary/20'
+                : 'text-white/70 hover:bg-background-tertiary hover:text-white border border-transparent'
+            )}
           >
             <BookOpen className="h-5 w-5" />
             Courses
           </Link>
           <Link
             href="/admin/signs"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/80 hover:bg-background-tertiary hover:text-white"
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+              pathname.startsWith('/admin/signs')
+                ? 'bg-primary/15 text-primary border border-primary/20'
+                : 'text-white/70 hover:bg-background-tertiary hover:text-white border border-transparent'
+            )}
           >
             <Search className="h-5 w-5" />
             Dictionary
+          </Link>
+          <Link
+            href="/admin/feedback"
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+              pathname.startsWith('/admin/feedback')
+                ? 'bg-primary/15 text-primary border border-primary/20'
+                : 'text-white/70 hover:bg-background-tertiary hover:text-white border border-transparent'
+            )}
+          >
+            <MessageSquare className="h-5 w-5" />
+            Feedback
           </Link>
         </nav>
         <div className="mt-auto pt-4 border-t border-background-tertiary">

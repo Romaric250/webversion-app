@@ -1,15 +1,17 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { AppBottomNav } from '@/components/layout/AppBottomNav'
+import { bottomNavItems } from '@/lib/nav'
+import { EmailVerificationModal } from '@/components/ui/EmailVerificationModal'
 import { useAuthStore } from '@/store/authStore'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  const { isAuthenticated, isLoading } = useAuthStore()
+  const { isAuthenticated, isLoading, user } = useAuthStore()
 
   useEffect(() => {
     if (isLoading) return
@@ -34,11 +36,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AppSidebar />
       <div className="lg:pl-sidebar">
         <AppHeader />
-        <main className="pt-16 lg:pt-0 pb-20 lg:pb-8 min-h-screen">
+        <main className={bottomNavItems.length > 0 ? 'pt-16 lg:pt-0 pb-20 lg:pb-8 min-h-screen' : 'pt-16 lg:pt-0 pb-8 min-h-screen'}>
           <div className="page-container py-6 lg:py-8">{children}</div>
         </main>
         <AppBottomNav />
       </div>
+      {user?.emailVerified === false && (
+        <EmailVerificationModal
+          isOpen={true}
+          onClose={() => {}}
+          userEmail={user.email}
+        />
+      )}
     </div>
   )
 }

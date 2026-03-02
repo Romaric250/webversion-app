@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Mic, Square, Loader2, FileText, ChevronDown, ChevronUp } from 'lucide-react'
+import { Mic, Square, Loader2, FileText, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { Toast } from '@/components/ui/Toast'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { transcriptApi, type Transcript } from '@/services/api/transcript.api'
@@ -228,7 +228,13 @@ export default function TranscriptsPage() {
         ) : (
           <div className="space-y-4">
             {transcripts.map((t) => (
-              <TranscriptCard key={t.id} transcript={t} formatDate={formatDate} />
+              <TranscriptCard
+                key={t.id}
+                transcript={t}
+                formatDate={formatDate}
+                onDelete={() => setTranscripts((prev) => prev.filter((x) => x.id !== t.id))}
+                onError={(msg) => setError(msg)}
+              />
             ))}
           </div>
         )}
@@ -240,15 +246,33 @@ export default function TranscriptsPage() {
 function TranscriptCard({
   transcript,
   formatDate,
+  onDelete,
+  onError,
 }: {
   transcript: Transcript
   formatDate: (iso: string) => string
+  onDelete: () => void
+  onError: (msg: string) => void
 }) {
   const [showRaw, setShowRaw] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const displayText = showRaw
     ? transcript.rawText
     : (transcript.processedText || transcript.rawText)
   const hasProcessed = !!transcript.processedText && transcript.processedText !== transcript.rawText
+
+  const handleDelete = async () => {
+    if (deleting) return
+    setDeleting(true)
+    try {
+      await transcriptApi.deleteTranscript(transcript.id)
+      onDelete()
+    } catch (e) {
+      onError(e instanceof Error ? e.message : 'Failed to delete transcript')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   return (
     <div className="card overflow-hidden">
@@ -258,8 +282,18 @@ function TranscriptCard({
             <p className="text-white leading-relaxed whitespace-pre-wrap">{displayText || '(Empty)'}</p>
             <p className="text-white/40 text-xs mt-3">{formatDate(transcript.createdAt)}</p>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
-            <FileText className="h-5 w-5 text-primary" />
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="p-2 rounded-lg text-white/50 hover:bg-red-500/20 hover:text-red-400 transition-colors disabled:opacity-50"
+              title="Delete transcript"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+            <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
           </div>
         </div>
         {hasProcessed && (

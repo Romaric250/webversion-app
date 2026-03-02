@@ -1,15 +1,35 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Mic, Hand, BookOpen, Flame, Clock, ArrowRight, Lightbulb, FileText } from 'lucide-react'
+import { Mic, Hand, BookOpen, Flame, Clock, ArrowRight, Lightbulb, FileText, ScanLine, Users, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { apiClient } from '@/services/api/client'
+import { API_BASE_URL } from '@/config/api'
+import { chatsApi } from '@/services/api/chats.api'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0] || 'there'
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening'
+
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([])
+  const [chats, setChats] = useState<{ id: string; otherUser?: { name: string } }[]>([])
+  const [progress, setProgress] = useState<{ signsLearned: number; streak: number; practiceTime: number } | null>(null)
+
+  useEffect(() => {
+    Promise.all([
+      apiClient.get<{ success: boolean; data: any[] }>(`${API_BASE_URL}/groups`),
+      chatsApi.getMyChats(),
+      apiClient.get<{ success: boolean; data: any }>(`${API_BASE_URL}/progress`),
+    ]).then(([gRes, cData, pRes]) => {
+      if (gRes.data.success && gRes.data.data) setGroups(gRes.data.data)
+      setChats(cData)
+      if (pRes.data.success && pRes.data.data) setProgress(pRes.data.data)
+    }).catch(() => {})
+  }, [])
 
   const quickActions = [
     {
@@ -18,6 +38,13 @@ export default function DashboardPage() {
       subtitle: 'Translate text to sign language with avatar',
       icon: Hand,
       gradient: 'from-emerald-600/20 to-emerald-900/10',
+    },
+    {
+      href: '/app/sign-to-text',
+      title: 'Sign to Text',
+      subtitle: 'Convert sign language to text (coming soon)',
+      icon: ScanLine,
+      gradient: 'from-teal-600/20 to-teal-900/10',
     },
     {
       href: '/app/transcripts',
@@ -43,9 +70,9 @@ export default function DashboardPage() {
   ]
 
   const stats = [
-    { label: 'Signs Learned', value: '24', icon: Hand },
-    { label: 'Day Streak', value: '7', icon: Flame },
-    { label: 'Minutes Today', value: '15', icon: Clock },
+    { label: 'Signs Learned', value: String(progress?.signsLearned ?? 0), icon: Hand },
+    { label: 'Day Streak', value: String(progress?.streak ?? 0), icon: Flame },
+    { label: 'Minutes Today', value: String(progress?.practiceTime ?? 0), icon: Clock },
   ]
 
   return (
@@ -99,6 +126,39 @@ export default function DashboardPage() {
           })}
         </div>
       </section>
+
+      {/* Groups & Chats */}
+      {(groups.length > 0 || chats.length > 0) && (
+        <section className="mb-10">
+          <h2 className="text-lg font-semibold text-white mb-4">Recent Activity</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {groups.length > 0 && (
+              <Link href="/app/groups" className="card card-hover p-5 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Your Groups</p>
+                  <p className="text-white/60 text-sm">{groups.length} group{groups.length !== 1 ? 's' : ''}</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-white/40 ml-auto" />
+              </Link>
+            )}
+            {chats.length > 0 && (
+              <Link href="/app/chats" className="card card-hover p-5 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <MessageCircle className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-white">Recent Chats</p>
+                  <p className="text-white/60 text-sm">{chats.length} chat{chats.length !== 1 ? 's' : ''}</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-white/40 ml-auto" />
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Quick Actions */}
       <section className="mb-10">

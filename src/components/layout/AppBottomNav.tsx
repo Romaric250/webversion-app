@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils'
 export function AppBottomNav() {
   const pathname = usePathname()
 
+  if (bottomNavItems.length === 0) return null
+
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around py-2 px-4 bg-background-secondary border-t border-background-tertiary safe-area-pb">
       {bottomNavItems.map((item) => {

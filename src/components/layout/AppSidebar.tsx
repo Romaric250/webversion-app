@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { LogOut, Hand, Shield } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
-import { navItems, isActive } from '@/lib/nav'
+import { navItems, footerNavItems, isActive } from '@/lib/nav'
 import { cn } from '@/lib/utils'
 
 export function AppSidebar() {
@@ -48,15 +48,37 @@ export function AppSidebar() {
             </Link>
           )
         })}
-        {user?.isAdmin && (
-          <Link
-            href="/admin"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/60 hover:bg-background-tertiary hover:text-white mt-4 border-t border-background-tertiary pt-4"
-          >
-            <Shield className="h-5 w-5 flex-shrink-0" />
-            Admin
-          </Link>
-        )}
+        <div className="mt-6 pt-4 border-t border-background-tertiary space-y-1">
+          {footerNavItems.map((item) => {
+            const Icon = item.icon
+            const basePath = item.href.split('?')[0].split('#')[0]
+            const active = pathname === basePath || pathname.startsWith(basePath + '/')
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                  active
+                    ? 'bg-primary/15 text-primary border border-primary/20'
+                    : 'text-white/60 hover:bg-background-tertiary hover:text-white'
+                )}
+              >
+                <Icon className="h-5 w-5 flex-shrink-0" />
+                {item.label}
+              </Link>
+            )
+          })}
+          {user?.isAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-white/60 hover:bg-background-tertiary hover:text-white"
+            >
+              <Shield className="h-5 w-5 flex-shrink-0" />
+              Admin
+            </Link>
+          )}
+        </div>
       </nav>
 
       {/* User & Logout */}
