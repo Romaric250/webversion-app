@@ -9,7 +9,6 @@ import { useAuthStore } from '@/store/authStore'
 import { navItems, footerNavItems, isActive } from '@/lib/nav'
 import { cn } from '@/lib/utils'
 import { PlansModal } from '@/components/PlansModal'
-import { ConfirmLogoutModal } from '@/components/ui/ConfirmLogoutModal'
 
 export function AppHeader() {
   const pathname = usePathname()
@@ -17,7 +16,6 @@ export function AppHeader() {
   const { user, logout } = useAuthStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [plansOpen, setPlansOpen] = useState(false)
-  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const planName = user?.subscriptionPlan ? String(user.subscriptionPlan).charAt(0).toUpperCase() + String(user.subscriptionPlan).slice(1) : 'Free'
   const isFree = !user?.subscriptionPlan || user.subscriptionPlan === 'free'
 
@@ -112,7 +110,7 @@ export function AppHeader() {
           {planName} {isFree && '• Upgrade'}
         </button>
         <button
-          onClick={() => setLogoutConfirmOpen(true)}
+          onClick={handleLogout}
           className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-400"
         >
           <LogOut className="h-5 w-5" />
@@ -151,11 +149,6 @@ export function AppHeader() {
 
       {typeof document !== 'undefined' && createPortal(mobileSidebarContent, document.body)}
       <PlansModal isOpen={plansOpen} onClose={() => setPlansOpen(false)} />
-      <ConfirmLogoutModal
-        isOpen={logoutConfirmOpen}
-        onClose={() => setLogoutConfirmOpen(false)}
-        onConfirm={handleLogout}
-      />
     </header>
   )
 }

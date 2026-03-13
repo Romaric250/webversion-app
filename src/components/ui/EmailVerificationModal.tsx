@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Modal } from './Modal'
-import { ConfirmLogoutModal } from './ConfirmLogoutModal'
 import { authApi } from '@/services/api/auth.api'
 import { useAuthStore } from '@/store/authStore'
 
@@ -20,7 +19,6 @@ export function EmailVerificationModal({ isOpen, onClose, userEmail }: EmailVeri
   const [resending, setResending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const [initialSending, setInitialSending] = useState(true)
 
   // Brief loading state so the email (sent by backend on signup/login) has time to be delivered
@@ -127,7 +125,7 @@ export function EmailVerificationModal({ isOpen, onClose, userEmail }: EmailVeri
         <div className="pt-4 border-t border-background-tertiary">
           <button
             type="button"
-            onClick={() => setLogoutConfirmOpen(true)}
+            onClick={() => logout()}
             className="w-full py-2.5 text-sm text-red-400 hover:text-red-300 underline transition-colors"
           >
             Sign out
@@ -136,11 +134,6 @@ export function EmailVerificationModal({ isOpen, onClose, userEmail }: EmailVeri
           </>
         )}
       </div>
-      <ConfirmLogoutModal
-        isOpen={logoutConfirmOpen}
-        onClose={() => setLogoutConfirmOpen(false)}
-        onConfirm={() => logout()}
-      />
     </Modal>
   )
 }

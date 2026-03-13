@@ -8,14 +8,12 @@ import { useAuthStore } from '@/store/authStore'
 import { navItems, footerNavItems, isActive } from '@/lib/nav'
 import { cn } from '@/lib/utils'
 import { PlansModal } from '@/components/PlansModal'
-import { ConfirmLogoutModal } from '@/components/ui/ConfirmLogoutModal'
 
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
   const [plansOpen, setPlansOpen] = useState(false)
-  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const planName = user?.subscriptionPlan ? String(user.subscriptionPlan).charAt(0).toUpperCase() + String(user.subscriptionPlan).slice(1) : 'Free'
   const isFree = !user?.subscriptionPlan || user.subscriptionPlan === 'free'
 
@@ -113,11 +111,6 @@ export function AppSidebar() {
         </button>
       </div>
       <PlansModal isOpen={plansOpen} onClose={() => setPlansOpen(false)} />
-      <ConfirmLogoutModal
-        isOpen={logoutConfirmOpen}
-        onClose={() => setLogoutConfirmOpen(false)}
-        onConfirm={handleLogout}
-      />
     </aside>
   )
 }
