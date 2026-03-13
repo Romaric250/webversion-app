@@ -47,6 +47,9 @@ export default function ForgotPasswordPage() {
             <p className="text-white/60 text-sm mt-2 max-w-sm">
               If an account exists with <span className="text-white font-medium">{email}</span>, you will receive a password reset link shortly.
             </p>
+            <p className="text-white/50 text-xs mt-3 max-w-sm">
+              Can&apos;t find it? Check your spam or junk folder. If you use an .edu or institutional email, delivery may take a few minutes longer.
+            </p>
           </div>
           <div className="space-y-3">
             <Link

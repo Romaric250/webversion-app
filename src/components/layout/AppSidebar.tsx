@@ -3,17 +3,19 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut, Shield, Sparkles } from 'lucide-react'
+import { LogOut, Shield } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { navItems, footerNavItems, isActive } from '@/lib/nav'
 import { cn } from '@/lib/utils'
 import { PlansModal } from '@/components/PlansModal'
+import { ConfirmLogoutModal } from '@/components/ui/ConfirmLogoutModal'
 
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
   const [plansOpen, setPlansOpen] = useState(false)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const planName = user?.subscriptionPlan ? String(user.subscriptionPlan).charAt(0).toUpperCase() + String(user.subscriptionPlan).slice(1) : 'Free'
   const isFree = !user?.subscriptionPlan || user.subscriptionPlan === 'free'
 
@@ -88,11 +90,13 @@ export function AppSidebar() {
       <div className="p-4 border-t border-background-tertiary space-y-4">
         <button
           onClick={() => setPlansOpen(true)}
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-white/80 hover:bg-background-tertiary transition-colors"
+          className={cn(
+            "flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium hover:bg-background-tertiary transition-colors",
+            isFree ? "text-amber-400/90 hover:text-amber-400" : "text-white/80 hover:text-white"
+          )}
         >
-          <Sparkles className="h-5 w-5 flex-shrink-0" />
           <span className="flex-1 text-left">{planName}</span>
-          {isFree && <span className="text-primary text-xs">Upgrade</span>}
+          {isFree && <span className="text-amber-400 text-xs">Upgrade</span>}
         </button>
         {user && (
           <div className="px-4 py-2 rounded-lg bg-background-tertiary/50">
@@ -101,14 +105,19 @@ export function AppSidebar() {
           </div>
         )}
         <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-white/80 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+          onClick={() => setLogoutConfirmOpen(true)}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
         >
           <LogOut className="h-5 w-5" />
           Sign out
         </button>
       </div>
       <PlansModal isOpen={plansOpen} onClose={() => setPlansOpen(false)} />
+      <ConfirmLogoutModal
+        isOpen={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={handleLogout}
+      />
     </aside>
   )
 }

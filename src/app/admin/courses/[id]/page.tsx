@@ -1,9 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Plus, BookOpen, GripVertical, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Plus, BookOpen, GripVertical, Pencil, Trash2, Users } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { apiClient } from '@/services/api/client'
 import { API_ENDPOINTS } from '@/config/api'
 import { Modal } from '@/components/ui/Modal'
@@ -12,6 +29,7 @@ import { ImageUpload } from '@/components/admin/ImageUpload'
 import { VideoUpload } from '@/components/admin/VideoUpload'
 import { LessonContentEditor } from '@/components/admin/LessonContentEditor'
 import { QuizForm, type QuizContent } from '@/components/admin/QuizForm'
+import { cn } from '@/lib/utils'
 
 interface LessonLink {
   label: string
@@ -38,6 +56,88 @@ interface Course {
   lessons: Lesson[]
 }
 
+interface Enrollment {
+  id: string
+  enrolledAt: string
+  completedAt: string | null
+  user: { id: string; name: string; email: string; image?: string | null }
+}
+
+function SortableLessonRow({
+  lesson,
+  index,
+  onEdit,
+  onDelete,
+}: {
+  lesson: Lesson
+  index: number
+  onEdit: (l: Lesson) => void
+  onDelete: (l: Lesson) => void
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: lesson.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'rounded-xl bg-background-secondary border border-background-tertiary p-5 flex items-center gap-4 hover:border-background-tertiary/80 transition-colors',
+        isDragging && 'opacity-50 shadow-lg z-10'
+      )}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="p-1 -ml-1 rounded cursor-grab active:cursor-grabbing text-white/30 hover:text-white/60 flex-shrink-0 touch-none"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <span className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center text-sm font-medium flex-shrink-0">
+        {index + 1}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-white truncate">{lesson.title}</p>
+        {lesson.content && (
+          <p className="text-white/50 text-sm truncate mt-0.5">
+            {typeof lesson.content === 'string' && lesson.content.length > 80
+              ? lesson.content.slice(0, 80) + '...'
+              : lesson.content}
+          </p>
+        )}
+      </div>
+      <div className="flex gap-1 flex-shrink-0">
+        <button
+          onClick={() => onEdit(lesson)}
+          className="p-2 rounded-lg text-white/60 hover:text-primary hover:bg-primary/10"
+          aria-label="Edit"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => onDelete(lesson)}
+          className="p-2 rounded-lg text-white/60 hover:text-red-400 hover:bg-red-500/10"
+          aria-label="Delete"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminCourseDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -60,6 +160,8 @@ export default function AdminCourseDetailPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [reordering, setReordering] = useState(false)
 
   const fetchCourse = async () => {
     try {
@@ -76,9 +178,59 @@ export default function AdminCourseDetailPage() {
     }
   }
 
+  const fetchEnrollments = useCallback(async () => {
+    try {
+      const { data } = await apiClient.get<{ success: boolean; data: Enrollment[] }>(
+        API_ENDPOINTS.ADMIN.COURSE_ENROLLMENTS(id)
+      )
+      if (data.success) setEnrollments(data.data || [])
+    } catch {
+      setEnrollments([])
+    }
+  }, [id])
+
   useEffect(() => {
     fetchCourse()
   }, [id])
+
+  useEffect(() => {
+    if (course) fetchEnrollments()
+  }, [course, fetchEnrollments])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id || !course) return
+
+    const oldIndex = course.lessons.findIndex((l) => l.id === active.id)
+    const newIndex = course.lessons.findIndex((l) => l.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const newOrder = arrayMove(course.lessons.sort((a, b) => a.order - b.order), oldIndex, newIndex)
+    setCourse((p) => (p ? { ...p, lessons: newOrder } : null))
+    setReordering(true)
+    setError(null)
+    try {
+      await apiClient.patch(API_ENDPOINTS.ADMIN.COURSE_LESSONS_REORDER(id), {
+        lessonIds: newOrder.map((l) => l.id),
+      })
+      setSuccess('Order updated')
+      setTimeout(() => setSuccess(null), 2000)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to reorder')
+      fetchCourse()
+    } finally {
+      setReordering(false)
+    }
+  }
 
   const addLesson = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -237,6 +389,9 @@ export default function AdminCourseDetailPage() {
 
       <div>
         <h2 className="text-lg font-semibold text-white mb-4">Lessons</h2>
+        {course.lessons.length > 0 && (
+          <p className="text-white/50 text-sm mb-2">Drag the grip handle to reorder</p>
+        )}
         {course.lessons.length === 0 ? (
           <div
             onClick={() => setAddLessonModal(true)}
@@ -247,46 +402,76 @@ export default function AdminCourseDetailPage() {
             <p className="text-white/40 text-sm">Click to add your first lesson</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {course.lessons
-              .sort((a, b) => a.order - b.order)
-              .map((l, idx) => (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={course.lessons.sort((a, b) => a.order - b.order).map((l) => l.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2">
+                {course.lessons
+                  .sort((a, b) => a.order - b.order)
+                  .map((l, idx) => (
+                    <SortableLessonRow
+                      key={l.id}
+                      lesson={l}
+                      index={idx}
+                      onEdit={openEditLesson}
+                      onDelete={setDeleteLessonModal}
+                    />
+                  ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
+
+      {/* Enrollments */}
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          Enrolled ({enrollments.length})
+        </h2>
+        {enrollments.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-background-tertiary p-8 text-center">
+            <Users className="h-10 w-10 text-white/30 mx-auto mb-2" />
+            <p className="text-white/60 text-sm">No enrollments yet</p>
+          </div>
+        ) : (
+          <div className="rounded-xl bg-background-secondary border border-background-tertiary overflow-hidden">
+            <div className="divide-y divide-background-tertiary max-h-64 overflow-y-auto">
+              {enrollments.map((e) => (
                 <div
-                  key={l.id}
-                  className="rounded-xl bg-background-secondary border border-background-tertiary p-5 flex items-center gap-4 hover:border-background-tertiary/80 transition-colors"
+                  key={e.id}
+                  className="flex items-center gap-4 p-4 hover:bg-background-tertiary/30"
                 >
-                  <GripVertical className="h-5 w-5 text-white/30 flex-shrink-0" />
-                  <span className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center text-sm font-medium flex-shrink-0">
-                    {idx + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-white truncate">{l.title}</p>
-                    {l.content && (
-                      <p className="text-white/50 text-sm truncate mt-0.5">
-                        {typeof l.content === 'string' && l.content.length > 80
-                          ? l.content.slice(0, 80) + '...'
-                          : l.content}
-                      </p>
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    {e.user.image ? (
+                      <img src={e.user.image} alt="" className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      <span className="text-primary font-medium text-sm">
+                        {e.user.name?.charAt(0) || '?'}
+                      </span>
                     )}
                   </div>
-                  <div className="flex gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => openEditLesson(l)}
-                      className="p-2 rounded-lg text-white/60 hover:text-primary hover:bg-primary/10"
-                      aria-label="Edit"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => setDeleteLessonModal(l)}
-                      className="p-2 rounded-lg text-white/60 hover:text-red-400 hover:bg-red-500/10"
-                      aria-label="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-white truncate">{e.user.name}</p>
+                    <p className="text-white/50 text-sm truncate">{e.user.email}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-white/60 text-xs">
+                      Enrolled {new Date(e.enrolledAt).toLocaleDateString()}
+                    </p>
+                    {e.completedAt && (
+                      <p className="text-primary text-xs">Completed</p>
+                    )}
                   </div>
                 </div>
               ))}
+            </div>
           </div>
         )}
       </div>

@@ -106,7 +106,6 @@ export function LessonContentEditor({ value, onChange, placeholder = "Select tex
         extensions={extensions}
         initialContent={initialContent}
         onUpdate={({ editor }) => {
-          const html = editor.getHTML()
           const json = editor.getJSON()
           onChange(JSON.stringify(json))
         }}

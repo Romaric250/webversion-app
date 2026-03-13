@@ -11,7 +11,10 @@ const font = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: 'SignNova — Sign Language Translation',
   description: 'Real-time sign language translation for inclusive communication. Powered by Sign Bridge.',
-  icons: { icon: '/signbrige.ico' },
+  openGraph: {
+    title: 'SignNova — Sign Language Translation',
+    description: 'Real-time sign language translation for inclusive communication.',
+  },
 }
 
 export default function RootLayout({

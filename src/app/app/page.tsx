@@ -20,15 +20,24 @@ export default function DashboardPage() {
   const [progress, setProgress] = useState<{ signsLearned: number; streak: number; practiceTime: number } | null>(null)
 
   useEffect(() => {
-    Promise.all([
-      apiClient.get<{ success: boolean; data: any[] }>(`${API_BASE_URL}/groups`),
-      chatsApi.getMyChats(),
-      apiClient.get<{ success: boolean; data: any }>(`${API_BASE_URL}/progress`),
-    ]).then(([gRes, cData, pRes]) => {
-      if (gRes.data.success && gRes.data.data) setGroups(gRes.data.data)
-      setChats(cData)
-      if (pRes.data.success && pRes.data.data) setProgress(pRes.data.data)
-    }).catch(() => {})
+    const load = async () => {
+      try {
+        const [gRes, cData, pRes] = await Promise.all([
+          apiClient.get<{ success: boolean; data: any[] }>(`${API_BASE_URL}/groups`),
+          chatsApi.getMyChats(),
+          apiClient.get<{ success: boolean; data: any }>(`${API_BASE_URL}/progress`),
+        ])
+        if (gRes.data.success && gRes.data.data) setGroups(gRes.data.data)
+        setChats(cData)
+        if (pRes.data.success && pRes.data.data) setProgress(pRes.data.data)
+        // Update streak when user visits (tracks daily activity), then refresh progress
+        const streakRes = await apiClient.post<{ success: boolean; data: { streak: number } }>(`${API_BASE_URL}/progress/streak`).catch(() => null)
+        if (streakRes?.data?.success && streakRes.data.data && pRes.data.data) {
+          setProgress((prev) => prev ? { ...prev, streak: streakRes!.data!.data!.streak } : null)
+        }
+      } catch {}
+    }
+    load()
   }, [])
 
   const quickActions = [

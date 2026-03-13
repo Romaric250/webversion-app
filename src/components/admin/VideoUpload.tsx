@@ -73,7 +73,7 @@ export function VideoUpload({ value, onChange, label = 'Video' }: VideoUploadPro
             <>
               <Video className="h-10 w-10 text-white/50" />
               <span className="text-sm font-medium">Click to upload video</span>
-              <span className="text-xs text-white/40">MP4, WebM up to 32MB</span>
+              <span className="text-xs text-white/40">MP4, WebM up to 500MB</span>
             </>
           )}
         </button>

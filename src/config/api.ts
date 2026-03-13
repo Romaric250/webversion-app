@@ -77,6 +77,8 @@ export const API_ENDPOINTS = {
     COURSES: '/admin/courses',
     COURSE: (id: string) => `/admin/courses/${id}`,
     COURSE_LESSONS: (courseId: string) => `/admin/courses/${courseId}/lessons`,
+    COURSE_LESSONS_REORDER: (courseId: string) => `/admin/courses/${courseId}/lessons/reorder`,
+    COURSE_ENROLLMENTS: (courseId: string) => `/admin/courses/${courseId}/enrollments`,
     FEEDBACK: '/admin/feedback',
     PLANS: '/admin/plans',
     PLAN: (id: string) => `/admin/plans/${id}`,

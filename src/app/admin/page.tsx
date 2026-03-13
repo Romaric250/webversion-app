@@ -12,6 +12,7 @@ import {
   UsersRound,
   MessageCircle,
   FileText,
+  GraduationCap,
 } from 'lucide-react'
 import { apiClient } from '@/services/api/client'
 import { API_ENDPOINTS } from '@/config/api'
@@ -23,6 +24,7 @@ interface Stats {
   premiumCount: number
   signsCount: number
   coursesCount: number
+  enrollmentsCount: number
   feedbackCount: number
   transcriptionsCount: number
   groupsCount: number
@@ -36,6 +38,9 @@ interface ChartData {
   labels: string[]
   usersData: number[]
   transcriptionsData: number[]
+  messagesData: number[]
+  groupsData: number[]
+  notesData: number[]
 }
 
 const statCards = [
@@ -46,6 +51,7 @@ const statCards = [
   { key: 'notesCount', label: 'Notes', icon: FileText, color: 'amber' },
   { key: 'signsCount', label: 'Dictionary signs', icon: Search, color: 'primary' },
   { key: 'coursesCount', label: 'Courses', icon: BookOpen, color: 'primary' },
+  { key: 'enrollmentsCount', label: 'Course enrollments', icon: GraduationCap, color: 'emerald' },
   { key: 'feedbackCount', label: 'Feedback', icon: MessageSquare, color: 'primary' },
   { key: 'premiumCount', label: 'Premium users', icon: Crown, color: 'amber' },
 ] as const
@@ -138,7 +144,7 @@ export default function AdminDashboardPage() {
           labels: { colors: '#9ca3af' },
           position: 'top' as const,
         },
-        colors: ['#38E078', '#8b5cf6'],
+        colors: ['#38E078', '#8b5cf6', '#3b82f6', '#a855f7', '#f59e0b'],
       }
     : null
 
@@ -146,6 +152,9 @@ export default function AdminDashboardPage() {
     ? [
         { name: 'New users', data: chartData.usersData },
         { name: 'Transcriptions', data: chartData.transcriptionsData },
+        { name: 'Messages', data: chartData.messagesData },
+        { name: 'Groups', data: chartData.groupsData },
+        { name: 'Notes', data: chartData.notesData },
       ]
     : []
 

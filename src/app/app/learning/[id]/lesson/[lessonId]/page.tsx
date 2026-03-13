@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle, Loader2, ExternalLink } from 'lucide-react'
 import { learningApi, type Lesson } from '@/services/api/learning.api'
 import { useState, useEffect } from 'react'
 import { Toast } from '@/components/ui/Toast'
+import { LessonContentRenderer } from '@/components/learning/LessonContentRenderer'
 
 export default function LessonPage() {
   const params = useParams()
@@ -89,8 +90,8 @@ export default function LessonPage() {
   const completed = progress?.completedAt != null
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex items-center gap-4 mb-8">
+    <div className="max-w-2xl mx-auto px-2 sm:px-0">
+      <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
         <Link
           href={`/app/learning/${courseId}`}
           className="p-2 rounded-lg text-white/60 hover:bg-background-secondary hover:text-white transition-colors"
@@ -108,20 +109,20 @@ export default function LessonPage() {
 
       <div className="space-y-6">
         {lesson.content && (
-          <div className="rounded-xl bg-background-secondary border border-background-tertiary p-6">
-            <div className="prose prose-invert max-w-none text-white/90 whitespace-pre-wrap">{lesson.content}</div>
+          <div className="rounded-xl bg-background-secondary border border-background-tertiary p-4 sm:p-6">
+            <LessonContentRenderer content={lesson.content} />
           </div>
         )}
 
         {lesson.videoUrl && (
           <div className="rounded-xl overflow-hidden bg-background-tertiary">
-            <video src={lesson.videoUrl} controls className="w-full aspect-video object-contain" />
+            <video src={lesson.videoUrl} controls className="w-full aspect-video object-contain" playsInline />
           </div>
         )}
 
         {lesson.imageUrl && (
           <div className="rounded-xl overflow-hidden bg-background-tertiary">
-            <img src={lesson.imageUrl} alt="" className="w-full" />
+            <img src={lesson.imageUrl} alt="" className="w-full max-h-[50vh] object-contain" />
           </div>
         )}
 
