@@ -9,8 +9,14 @@ import { API_ENDPOINTS } from '@/config/api'
 import { Modal } from '@/components/ui/Modal'
 import { Toast } from '@/components/ui/Toast'
 import { ImageUpload } from '@/components/admin/ImageUpload'
+import { VideoUpload } from '@/components/admin/VideoUpload'
 import { LessonContentEditor } from '@/components/admin/LessonContentEditor'
 import { QuizForm, type QuizContent } from '@/components/admin/QuizForm'
+
+interface LessonLink {
+  label: string
+  url: string
+}
 
 interface Lesson {
   id: string
@@ -19,6 +25,7 @@ interface Lesson {
   content?: string | null
   videoUrl?: string | null
   imageUrl?: string | null
+  links?: LessonLink[]
   quizContent?: unknown
 }
 
@@ -47,6 +54,8 @@ export default function AdminCourseDetailPage() {
     title: '',
     content: '',
     videoUrl: '',
+    imageUrl: '',
+    links: [] as LessonLink[],
     quiz: null as QuizContent | null,
   })
   const [error, setError] = useState<string | null>(null)
@@ -82,11 +91,12 @@ export default function AdminCourseDetailPage() {
         title: lessonForm.title.trim(),
         content: lessonForm.content.trim() || null,
         videoUrl: lessonForm.videoUrl || null,
-        imageUrl: lessonForm.videoUrl || null,
+        imageUrl: lessonForm.imageUrl || null,
+        links: lessonForm.links.length ? lessonForm.links : null,
         order: course?.lessons.length ?? 0,
         quizContent,
       })
-      setLessonForm({ title: '', content: '', videoUrl: '', quiz: null })
+      setLessonForm({ title: '', content: '', videoUrl: '', imageUrl: '', links: [], quiz: null })
       setAddLessonModal(false)
       setSuccess('Lesson added')
       setTimeout(() => setSuccess(null), 3000)
@@ -101,10 +111,13 @@ export default function AdminCourseDetailPage() {
   const openEditLesson = (l: Lesson) => {
     setEditLessonModal(l)
     const q = l.quizContent as QuizContent | null
+    const links = Array.isArray(l.links) ? l.links : []
     setLessonForm({
       title: l.title,
       content: l.content || '',
-      videoUrl: l.imageUrl || l.videoUrl || '',
+      videoUrl: l.videoUrl || '',
+      imageUrl: l.imageUrl || '',
+      links,
       quiz: q?.questions?.length ? q : null,
     })
   }
@@ -120,7 +133,8 @@ export default function AdminCourseDetailPage() {
         title: lessonForm.title.trim(),
         content: lessonForm.content.trim() || null,
         videoUrl: lessonForm.videoUrl || null,
-        imageUrl: lessonForm.videoUrl || null,
+        imageUrl: lessonForm.imageUrl || null,
+        links: lessonForm.links,
         quizContent,
       })
       setEditLessonModal(null)
@@ -302,11 +316,66 @@ export default function AdminCourseDetailPage() {
               placeholder="Lesson content or instructions. Select text for formatting options."
             />
           </div>
-          <ImageUpload
+          <VideoUpload
             value={lessonForm.videoUrl}
             onChange={(url) => setLessonForm((p) => ({ ...p, videoUrl: url }))}
+            label="Video (optional)"
+          />
+          <ImageUpload
+            value={lessonForm.imageUrl}
+            onChange={(url) => setLessonForm((p) => ({ ...p, imageUrl: url }))}
             label="Image / thumbnail (optional)"
           />
+          <div>
+            <label className="block text-white/80 text-sm font-medium mb-2">Links (optional)</label>
+            <div className="space-y-2">
+              {lessonForm.links.map((link, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    value={link.label}
+                    onChange={(e) =>
+                      setLessonForm((p) => ({
+                        ...p,
+                        links: p.links.map((l, j) => (j === i ? { ...l, label: e.target.value } : l)),
+                      }))
+                    }
+                    placeholder="Label"
+                    className="flex-1 px-4 py-2 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50 text-sm"
+                  />
+                  <input
+                    value={link.url}
+                    onChange={(e) =>
+                      setLessonForm((p) => ({
+                        ...p,
+                        links: p.links.map((l, j) => (j === i ? { ...l, url: e.target.value } : l)),
+                      }))
+                    }
+                    placeholder="https://..."
+                    type="url"
+                    className="flex-1 px-4 py-2 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLessonForm((p) => ({ ...p, links: p.links.filter((_, j) => j !== i) }))
+                    }
+                    className="p-2 rounded-lg text-white/60 hover:text-red-400 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setLessonForm((p) => ({ ...p, links: [...p.links, { label: '', url: '' }] }))
+                }
+                className="text-sm text-primary hover:underline"
+              >
+                + Add link
+              </button>
+            </div>
+          </div>
           <div>
             <QuizForm
               value={lessonForm.quiz}
@@ -352,7 +421,58 @@ export default function AdminCourseDetailPage() {
                 placeholder="Lesson content. Select text for formatting options."
               />
             </div>
-            <ImageUpload value={lessonForm.videoUrl} onChange={(url) => setLessonForm((p) => ({ ...p, videoUrl: url }))} label="Image / thumbnail" />
+            <VideoUpload value={lessonForm.videoUrl} onChange={(url) => setLessonForm((p) => ({ ...p, videoUrl: url }))} label="Video" />
+            <ImageUpload value={lessonForm.imageUrl} onChange={(url) => setLessonForm((p) => ({ ...p, imageUrl: url }))} label="Image / thumbnail" />
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Links</label>
+              <div className="space-y-2">
+                {lessonForm.links.map((link, i) => (
+                  <div key={i} className="flex gap-2">
+                    <input
+                      value={link.label}
+                      onChange={(e) =>
+                        setLessonForm((p) => ({
+                          ...p,
+                          links: p.links.map((l, j) => (j === i ? { ...l, label: e.target.value } : l)),
+                        }))
+                      }
+                      placeholder="Label"
+                      className="flex-1 px-4 py-2 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50 text-sm"
+                    />
+                    <input
+                      value={link.url}
+                      onChange={(e) =>
+                        setLessonForm((p) => ({
+                          ...p,
+                          links: p.links.map((l, j) => (j === i ? { ...l, url: e.target.value } : l)),
+                        }))
+                      }
+                      placeholder="https://..."
+                      type="url"
+                      className="flex-1 px-4 py-2 rounded-lg bg-background-tertiary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setLessonForm((p) => ({ ...p, links: p.links.filter((_, j) => j !== i) }))
+                      }
+                      className="p-2 rounded-lg text-white/60 hover:text-red-400 hover:bg-red-500/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLessonForm((p) => ({ ...p, links: [...p.links, { label: '', url: '' }] }))
+                  }
+                  className="text-sm text-primary hover:underline"
+                >
+                  + Add link
+                </button>
+              </div>
+            </div>
             <div>
               <QuizForm
                 value={lessonForm.quiz}

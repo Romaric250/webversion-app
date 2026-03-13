@@ -5,6 +5,7 @@ export interface User {
   image?: string
   isAdmin?: boolean
   emailVerified?: boolean
+  subscriptionPlan?: string
 }
 
 export interface AuthResponse {

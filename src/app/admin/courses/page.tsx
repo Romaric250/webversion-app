@@ -15,6 +15,7 @@ interface Course {
   description: string | null
   thumbnailUrl: string | null
   isPublished: boolean
+  ashesiOnly?: boolean
   order: number
 }
 
@@ -30,7 +31,8 @@ export default function AdminCoursesPage() {
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
   const [thumbnail, setThumbnail] = useState('')
-  const [editForm, setEditForm] = useState({ title: '', desc: '', thumbnail: '', isPublished: false })
+  const [createAshesiOnly, setCreateAshesiOnly] = useState(false)
+  const [editForm, setEditForm] = useState({ title: '', desc: '', thumbnail: '', isPublished: false, ashesiOnly: false })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -58,10 +60,12 @@ export default function AdminCoursesPage() {
         title,
         description: desc || null,
         thumbnailUrl: thumbnail || null,
+        ashesiOnly: createAshesiOnly,
       })
       setTitle('')
       setDesc('')
       setThumbnail('')
+      setCreateAshesiOnly(false)
       setCreateModal(false)
       setSuccess('Course created')
       setTimeout(() => setSuccess(null), 3000)
@@ -80,6 +84,7 @@ export default function AdminCoursesPage() {
       desc: c.description || '',
       thumbnail: c.thumbnailUrl || '',
       isPublished: c.isPublished,
+      ashesiOnly: c.ashesiOnly ?? false,
     })
   }
 
@@ -94,6 +99,7 @@ export default function AdminCoursesPage() {
         description: editForm.desc.trim() || null,
         thumbnailUrl: editForm.thumbnail || null,
         isPublished: editForm.isPublished,
+        ashesiOnly: editForm.ashesiOnly,
       })
       setEditModal(null)
       setSuccess('Course updated')
@@ -224,6 +230,18 @@ export default function AdminCoursesPage() {
             onChange={setThumbnail}
             label="Thumbnail (optional)"
           />
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={createAshesiOnly}
+                onChange={(e) => setCreateAshesiOnly(e.target.checked)}
+                className="rounded border-background-tertiary bg-background-tertiary text-primary focus:ring-primary"
+              />
+              <span className="text-white/80 text-sm">Ashesi students only</span>
+            </label>
+            <span className="text-white/50 text-xs">(@ashesi.edu.gh emails)</span>
+          </div>
           <div className="flex gap-2 pt-2">
             <button
               type="button"
@@ -265,6 +283,18 @@ export default function AdminCoursesPage() {
               />
             </div>
             <ImageUpload value={editForm.thumbnail} onChange={(url) => setEditForm((p) => ({ ...p, thumbnail: url }))} label="Thumbnail" />
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editForm.ashesiOnly}
+                  onChange={(e) => setEditForm((p) => ({ ...p, ashesiOnly: e.target.checked }))}
+                  className="rounded border-background-tertiary bg-background-tertiary text-primary focus:ring-primary"
+                />
+                <span className="text-white/80 text-sm">Ashesi students only</span>
+              </label>
+              <span className="text-white/50 text-xs">(@ashesi.edu.gh emails)</span>
+            </div>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"

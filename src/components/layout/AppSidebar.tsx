@@ -1,16 +1,21 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { LogOut, Hand, Shield } from 'lucide-react'
+import { LogOut, Shield, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { navItems, footerNavItems, isActive } from '@/lib/nav'
 import { cn } from '@/lib/utils'
+import { PlansModal } from '@/components/PlansModal'
 
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
+  const [plansOpen, setPlansOpen] = useState(false)
+  const planName = user?.subscriptionPlan ? String(user.subscriptionPlan).charAt(0).toUpperCase() + String(user.subscriptionPlan).slice(1) : 'Free'
+  const isFree = !user?.subscriptionPlan || user.subscriptionPlan === 'free'
 
   const handleLogout = async () => {
     await logout()
@@ -21,9 +26,7 @@ export function AppSidebar() {
     <aside className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:left-0 lg:w-sidebar lg:bg-background-secondary lg:border-r lg:border-background-tertiary">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-background-tertiary">
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
-          <Hand className="h-5 w-5 text-background" />
-        </div>
+        <img src="/logo.png" alt="SignNova" className="w-10 h-10 rounded-xl object-contain flex-shrink-0" />
         <p className="font-bold text-white text-lg">SignNova</p>
       </div>
 
@@ -83,6 +86,14 @@ export function AppSidebar() {
 
       {/* User & Logout */}
       <div className="p-4 border-t border-background-tertiary space-y-4">
+        <button
+          onClick={() => setPlansOpen(true)}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-white/80 hover:bg-background-tertiary transition-colors"
+        >
+          <Sparkles className="h-5 w-5 flex-shrink-0" />
+          <span className="flex-1 text-left">{planName}</span>
+          {isFree && <span className="text-primary text-xs">Upgrade</span>}
+        </button>
         {user && (
           <div className="px-4 py-2 rounded-lg bg-background-tertiary/50">
             <p className="text-white font-medium text-sm truncate">{user.name}</p>
@@ -97,6 +108,7 @@ export function AppSidebar() {
           Sign out
         </button>
       </div>
+      <PlansModal isOpen={plansOpen} onClose={() => setPlansOpen(false)} />
     </aside>
   )
 }

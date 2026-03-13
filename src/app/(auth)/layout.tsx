@@ -17,9 +17,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="relative flex flex-col justify-between w-full p-12 xl:p-16">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-              <span className="text-2xl">🤟</span>
-            </div>
+            <img src="/logo.png" alt="SignNova" className="w-12 h-12 rounded-xl object-contain shadow-lg shadow-primary/20" />
             <span className="text-xl font-bold text-white">SignNova</span>
           </div>
 

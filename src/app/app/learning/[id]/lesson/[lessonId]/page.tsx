@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle, Loader2, ExternalLink } from 'lucide-react'
 import { learningApi, type Lesson } from '@/services/api/learning.api'
 import { useState, useEffect } from 'react'
 import { Toast } from '@/components/ui/Toast'
@@ -113,13 +113,36 @@ export default function LessonPage() {
           </div>
         )}
 
-        {(lesson.videoUrl || lesson.imageUrl) && (
+        {lesson.videoUrl && (
           <div className="rounded-xl overflow-hidden bg-background-tertiary">
-            {lesson.videoUrl && (lesson.videoUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-              <video src={lesson.videoUrl} controls className="w-full" />
-            ) : (
-              <img src={lesson.videoUrl || lesson.imageUrl!} alt="" className="w-full" />
-            ))}
+            <video src={lesson.videoUrl} controls className="w-full aspect-video object-contain" />
+          </div>
+        )}
+
+        {lesson.imageUrl && (
+          <div className="rounded-xl overflow-hidden bg-background-tertiary">
+            <img src={lesson.imageUrl} alt="" className="w-full" />
+          </div>
+        )}
+
+        {Array.isArray(lesson.links) && lesson.links.length > 0 && (
+          <div className="rounded-xl bg-background-secondary border border-background-tertiary p-6">
+            <h2 className="text-lg font-semibold text-white mb-3">Resources</h2>
+            <ul className="space-y-2">
+              {lesson.links.map((link, i) => (
+                <li key={i}>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                    {link.label || link.url}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

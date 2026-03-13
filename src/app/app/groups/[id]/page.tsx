@@ -49,6 +49,7 @@ export default function GroupChatPage() {
   const [recording, setRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [transcribing, setTranscribing] = useState(false)
+  const [transcriptPreview, setTranscriptPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
@@ -147,6 +148,7 @@ export default function GroupChatPage() {
     if (!input.trim()) return
     setSending(true)
     setError(null)
+    setTranscriptPreview(null)
     try {
       const { data } = await apiClient.post<{ success: boolean; data: Message }>(
         `${API_BASE_URL}/groups/${id}/messages`,
@@ -202,6 +204,7 @@ export default function GroupChatPage() {
             const data = await res.json()
             if (data.success) {
               const transcript = data.data?.text || data.data?.rawText || ''
+              setTranscriptPreview(transcript)
               setInput((prev) => (prev ? `${prev}\n\n${transcript}` : transcript))
             }
           }
@@ -648,21 +651,32 @@ export default function GroupChatPage() {
       )}
 
       <div className="flex flex-col gap-2 flex-shrink-0">
+        {transcriptPreview && (
+          <div className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2">
+            <p className="text-xs font-medium text-primary/90 mb-1">Transcribed from voice</p>
+            <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">{transcriptPreview}</p>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                sendText()
-              }
-            }}
-            placeholder="Type a message..."
-            rows={1}
-            className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-background-secondary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50 resize-y min-h-[44px] max-h-[120px] overflow-y-auto"
-            disabled={sending || recording || transcribing}
-          />
+          <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  sendText()
+                }
+              }}
+              placeholder="Type a message..."
+              rows={1}
+              className="w-full px-4 py-3 rounded-xl bg-background-secondary border border-background-tertiary text-white text-base placeholder:text-white/40 outline-none focus:border-primary/50 resize-y min-h-[44px] max-h-[120px] overflow-y-auto [&::-webkit-input-placeholder]:text-white/40"
+              style={{ WebkitTextFillColor: 'inherit' }}
+              autoComplete="off"
+              data-lpignore="true"
+              disabled={sending || recording || transcribing}
+            />
+          </div>
           {!recording && !transcribing ? (
             <>
               <button

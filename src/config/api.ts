@@ -65,6 +65,7 @@ export const API_ENDPOINTS = {
     LESSON_COMPLETE: (lessonId: string) => `/learning/lessons/${lessonId}/complete`,
     LESSON_PROGRESS: (lessonId: string) => `/learning/lessons/${lessonId}/progress`,
   },
+  PLANS: '/plans',
   ADMIN: {
     STATS: '/admin/stats',
     CHART_DATA: '/admin/chart-data',
@@ -77,6 +78,8 @@ export const API_ENDPOINTS = {
     COURSE: (id: string) => `/admin/courses/${id}`,
     COURSE_LESSONS: (courseId: string) => `/admin/courses/${courseId}/lessons`,
     FEEDBACK: '/admin/feedback',
+    PLANS: '/admin/plans',
+    PLAN: (id: string) => `/admin/plans/${id}`,
   },
   PROGRESS: {
     GET: '/progress',

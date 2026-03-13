@@ -3,16 +3,20 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X, LogOut, Shield } from 'lucide-react'
+import { Menu, X, LogOut, Shield, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { navItems, footerNavItems, isActive } from '@/lib/nav'
 import { cn } from '@/lib/utils'
+import { PlansModal } from '@/components/PlansModal'
 
 export function AppHeader() {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [plansOpen, setPlansOpen] = useState(false)
+  const planName = user?.subscriptionPlan ? String(user.subscriptionPlan).charAt(0).toUpperCase() + String(user.subscriptionPlan).slice(1) : 'Free'
+  const isFree = !user?.subscriptionPlan || user.subscriptionPlan === 'free'
 
   const handleLogout = async () => {
     setMobileMenuOpen(false)
@@ -23,11 +27,17 @@ export function AppHeader() {
   return (
     <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-background/95 backdrop-blur-sm border-b border-background-tertiary">
       <Link href="/app" className="flex items-center gap-2">
-        <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-background font-bold text-sm">SN</span>
-        </div>
+        <img src="/logo.png" alt="SignNova" className="w-9 h-9 rounded-lg object-contain" />
         <span className="font-bold text-white">SignNova</span>
       </Link>
+
+      <button
+        onClick={() => setPlansOpen(true)}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-background-tertiary/80 text-white/80 hover:text-white hover:bg-background-tertiary text-xs font-medium"
+      >
+        <span>{planName}</span>
+        {isFree && <span className="text-primary">Upgrade</span>}
+      </button>
 
       <button
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -40,11 +50,15 @@ export function AppHeader() {
       {mobileMenuOpen && (
         <>
           <div
-            className="fixed inset-0 top-14 bg-black/40 z-30"
+            className="fixed inset-0 bg-black/50 z-40"
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden
           />
-          <div className="absolute top-full left-0 right-0 bg-background-secondary border-b border-background-tertiary shadow-xl z-50 max-h-[calc(100vh-3.5rem)] overflow-y-auto">
+          <div className="fixed top-0 left-0 bottom-0 w-72 max-w-[85vw] bg-background-secondary border-r border-background-tertiary shadow-xl z-50 overflow-y-auto">
+            <div className="p-4 border-b border-background-tertiary flex items-center gap-3">
+              <img src="/logo.png" alt="SignNova" className="w-10 h-10 rounded-xl object-contain" />
+              <span className="font-bold text-white text-lg">SignNova</span>
+            </div>
             <nav className="p-4 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon
@@ -99,6 +113,13 @@ export function AppHeader() {
             )}
             <div className="my-2 border-t border-background-tertiary" />
             <button
+              onClick={() => { setMobileMenuOpen(false); setPlansOpen(true) }}
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-white/80 hover:bg-background-tertiary"
+            >
+              <Sparkles className="h-5 w-5" />
+              {planName} {isFree && '• Upgrade'}
+            </button>
+            <button
               onClick={handleLogout}
               className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-white/80 hover:bg-red-500/10 hover:text-red-400"
             >
@@ -109,6 +130,7 @@ export function AppHeader() {
           </div>
         </>
       )}
+      <PlansModal isOpen={plansOpen} onClose={() => setPlansOpen(false)} />
     </header>
   )
 }

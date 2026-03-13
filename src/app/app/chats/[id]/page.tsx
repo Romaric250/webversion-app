@@ -49,6 +49,7 @@ export default function ChatDetailPage() {
   const [recordingTime, setRecordingTime] = useState(0)
   const [recordingPaused, setRecordingPaused] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
+  const [transcriptPreview, setTranscriptPreview] = useState<string | null>(null)
   const recordingCancelledRef = useRef(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -104,6 +105,7 @@ export default function ChatDetailPage() {
   const sendMessage = async () => {
     if (!input.trim()) return
     setSending(true)
+    setTranscriptPreview(null)
     try {
       const msg = await chatsApi.sendMessage(id, input.trim())
       setMessages((prev) => [...prev, msg])
@@ -154,6 +156,7 @@ export default function ChatDetailPage() {
             const data = await res.json()
             if (data.success) {
               const transcript = data.data?.text || data.data?.rawText || ''
+              setTranscriptPreview(transcript)
               setInput((prev) => (prev ? `${prev}\n\n${transcript}` : transcript))
             }
           }
@@ -288,21 +291,32 @@ export default function ChatDetailPage() {
       )}
 
       <div className="flex flex-col gap-2 flex-shrink-0">
+        {transcriptPreview && (
+          <div className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2">
+            <p className="text-xs font-medium text-primary/90 mb-1">Transcribed from voice</p>
+            <p className="text-white text-sm leading-relaxed whitespace-pre-wrap">{transcriptPreview}</p>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                sendMessage()
-              }
-            }}
-            placeholder="Type a message..."
-            rows={1}
-            className="flex-1 min-w-0 px-4 py-3 rounded-xl bg-background-secondary border border-background-tertiary text-white placeholder:text-white/40 outline-none focus:border-primary/50 resize-y min-h-[44px] max-h-[120px] overflow-y-auto"
-            disabled={sending || recording || transcribing}
-          />
+          <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  sendMessage()
+                }
+              }}
+              placeholder="Type a message..."
+              rows={1}
+              className="w-full px-4 py-3 rounded-xl bg-background-secondary border border-background-tertiary text-white text-base placeholder:text-white/40 outline-none focus:border-primary/50 resize-y min-h-[44px] max-h-[120px] overflow-y-auto [&::-webkit-input-placeholder]:text-white/40 [&::-moz-placeholder]:text-white/40"
+              style={{ WebkitTextFillColor: 'inherit' }}
+              autoComplete="off"
+              data-lpignore="true"
+              disabled={sending || recording || transcribing}
+            />
+          </div>
           {!recording && !transcribing ? (
             <>
               <button

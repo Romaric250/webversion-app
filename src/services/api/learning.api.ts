@@ -1,12 +1,18 @@
 import { apiClient } from './client'
 import { API_ENDPOINTS } from '@/config/api'
 
+export interface LessonLink {
+  label: string
+  url: string
+}
+
 export interface Lesson {
   id: string
   title: string
   content: string | null
   videoUrl: string | null
   imageUrl?: string | null
+  links?: LessonLink[]
   order: number
   quizContent?: {
     questions?: Array<{

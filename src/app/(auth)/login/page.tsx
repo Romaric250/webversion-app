@@ -54,9 +54,7 @@ function LoginForm() {
     <>
       <div className="lg:hidden mb-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <span className="text-xl">🤟</span>
-          </div>
+          <img src="/logo.png" alt="SignNova" className="w-10 h-10 rounded-xl object-contain" />
           <span className="text-lg font-bold text-white">SignNova</span>
         </div>
         <h1 className="text-2xl font-bold text-white">Welcome back</h1>

@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { LayoutDashboard, Users, BookOpen, Search, Shield, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, Users, BookOpen, Search, Shield, MessageSquare, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 
@@ -84,6 +84,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <Search className="h-5 w-5" />
             Dictionary
+          </Link>
+          <Link
+            href="/admin/plans"
+            className={cn(
+              'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+              pathname.startsWith('/admin/plans')
+                ? 'bg-primary/15 text-primary border border-primary/20'
+                : 'text-white/70 hover:bg-background-tertiary hover:text-white border border-transparent'
+            )}
+          >
+            <Sparkles className="h-5 w-5" />
+            Plans
           </Link>
           <Link
             href="/admin/feedback"
