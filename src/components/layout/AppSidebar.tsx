@@ -103,7 +103,7 @@ export function AppSidebar() {
           </div>
         )}
         <button
-          onClick={() => setLogoutConfirmOpen(true)}
+          onClick={handleLogout}
           className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
         >
           <LogOut className="h-5 w-5" />
