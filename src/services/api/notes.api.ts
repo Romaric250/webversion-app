@@ -75,8 +75,9 @@ export const notesApi = {
     const token = getAuthToken()
     if (!token) throw new Error('You must be logged in')
     const formData = new FormData()
-    formData.append('audio', audioBlob, 'recording.webm')
+    // Append fields before file so multer always parses processAs
     formData.append('processAs', payload.processAs || 'raw')
+    formData.append('audio', audioBlob, 'recording.webm')
     const res = await fetch(`${NOTES_URL}/${id}/from-recording`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -97,9 +98,9 @@ export const notesApi = {
     const token = getAuthToken()
     if (!token) throw new Error('You must be logged in')
     const formData = new FormData()
-    formData.append('audio', audioBlob, 'recording.webm')
     formData.append('title', payload.title)
     formData.append('processAs', payload.processAs || 'raw')
+    formData.append('audio', audioBlob, 'recording.webm')
     const res = await fetch(`${NOTES_URL}/from-recording`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -127,6 +128,25 @@ export const notesApi = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.error || err.message || 'Failed to update note')
+    }
+    const data = await res.json()
+    return data.data
+  },
+
+  rewrite: async (id: string, options?: { useRaw?: boolean }): Promise<Note> => {
+    const token = getAuthToken()
+    if (!token) throw new Error('You must be logged in')
+    const res = await fetch(`${NOTES_URL}/${id}/rewrite`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ useRaw: options?.useRaw ?? false }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || err.message || 'Failed to improve text')
     }
     const data = await res.json()
     return data.data

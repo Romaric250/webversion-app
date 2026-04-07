@@ -21,6 +21,7 @@ const CATEGORIES = [
   { value: 'chats', label: 'Chats' },
   { value: 'learning', label: 'Learning' },
   { value: 'dictionary', label: 'Dictionary' },
+  { value: 'notes', label: 'Notes' },
   { value: 'sign-to-text', label: 'Sign to Text' },
   { value: 'profile', label: 'Profile / Account' },
   { value: 'navigation', label: 'Navigation / Usability' },

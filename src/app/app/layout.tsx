@@ -7,6 +7,7 @@ import { AppHeader } from '@/components/layout/AppHeader'
 import { AppBottomNav } from '@/components/layout/AppBottomNav'
 import { bottomNavItems } from '@/lib/nav'
 import { EmailVerificationModal } from '@/components/ui/EmailVerificationModal'
+import { FeedbackPrompt } from '@/components/FeedbackPrompt'
 import { useAuthStore } from '@/store/authStore'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -48,6 +49,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           userEmail={user.email}
         />
       )}
+      {user?.emailVerified === true && <FeedbackPrompt />}
     </div>
   )
 }
